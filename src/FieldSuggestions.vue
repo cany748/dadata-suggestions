@@ -34,7 +34,7 @@ defineOptions({ inheritAttrs: false });
 const model = defineModel<string>();
 const props = defineProps<{
   name: string;
-  options: Options;
+  options: Options<any>;
 }>();
 
 const inputRef = useTemplateRef("input");

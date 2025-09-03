@@ -10,10 +10,10 @@
 
 <script setup lang="ts">
 import FieldSuggestions from "@/FieldSuggestions.vue";
+import type { Options } from "@/main";
 
-const options = {
-  token: import.meta.env.VITE_DADATA_API_KEY,
-  type: "NAME",
+const baseOptions = {
+  token: import.meta.env.VITE_DADATA_API_KEY || "",
   triggerSelectOnSpace: false,
   noCache: true,
   hint: false,
@@ -21,19 +21,19 @@ const options = {
   addon: "none",
 };
 
-const optionsName = {
-  ...options,
-  type: "NAME",
+const optionsName: Options<"NAME"> = {
+  ...baseOptions,
+  type: "NAME" as const,
 };
 
-const optionsEmail = {
-  ...options,
-  type: "EMAIL",
+const optionsEmail: Options<"EMAIL"> = {
+  ...baseOptions,
+  type: "EMAIL" as const,
 };
 
-const optionsFms = {
-  ...options,
-  type: "fms_unit",
+const optionsFms: Options<"FMS"> = {
+  ...baseOptions,
+  type: "FMS" as const,
 };
 </script>
 
