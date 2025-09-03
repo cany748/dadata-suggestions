@@ -1,0 +1,38 @@
+{
+  "name": "dadata-suggestions",
+  "type": "module",
+  "private": true,
+  "packageManager": "bun@1.2.21",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint --fix",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "cash-dom": "^8.1.5",
+    "ofetch": "^1.4.1",
+    "vue": "^3.5.21"
+  },
+  "devDependencies": {
+    "@cany748/eslint-config": "^4.1.0",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^22.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/test-utils": "^2.4.6",
+    "eslint-plugin-vue": "^10.4.0",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "vite": "npm:rolldown-vite@latest",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.0.6"
+  }
+}
