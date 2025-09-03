@@ -43,7 +43,7 @@ function formatResultInn(ctx: any, suggestion: Suggestion<SuggestionParty>, curr
 
         return formattedPart;
       });
-      formattedInn = innParts.join(`<span class="${that.classes.subtext_delimiter}"></span>`) + formattedInn.join("");
+      formattedInn = innParts.join(`<span class="${(ctx as any).classes.subtext_delimiter}"></span>`) + formattedInn.join("");
     }
 
     return formattedInn;
