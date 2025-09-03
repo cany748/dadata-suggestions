@@ -70,10 +70,14 @@ export function objectsEqual(a: Record<string, any>, b: Record<string, any>) {
 
     if (length !== Object.keys(b).length) return false;
 
-    for (i = length; i-- !== 0; ) if (!Object.prototype.hasOwnProperty.call(b, keys[i])) return false;
+    for (i = length; i-- !== 0; ) {
+      const key = keys[i];
+      if (!key || !Object.prototype.hasOwnProperty.call(b, key)) return false;
+    }
 
     for (i = length; i-- !== 0; ) {
       const key = keys[i];
+      if (!key) continue;
 
       if (!objectsEqual(a[key], b[key])) return false;
     }
@@ -221,8 +225,8 @@ export function highlightMatches(value: string, currentValue: string, options?: 
       text: word,
 
       // upper case means a word is a name and can be highlighted even if presents in unformattableTokens
-      hasUpperCase: word.toLowerCase() !== word,
-      formatted: formatToken(word),
+      hasUpperCase: word ? word.toLowerCase() !== word : false,
+      formatted: formatToken(word || ""),
       matchable: true,
     });
     if (match[2]) {

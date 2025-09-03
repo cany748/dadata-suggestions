@@ -1,7 +1,7 @@
 import { WORD_DELIMITERS } from "../constants";
 import { highlightMatches } from "../utils";
 import { matchers } from "../matchers";
-import type { SuggestionsType } from "../types";
+import type { SuggestionsType, Suggestion, SuggestionParty } from "../types";
 import { ADDRESS_COMPONENTS, ADDRESS_STOPWORDS } from "./address";
 
 const innPartsLengths = {
@@ -14,27 +14,25 @@ function chooseFormattedField(formattedMain: string, formattedAlt: string) {
   return rHasMatch.test(formattedAlt) && !rHasMatch.test(formattedMain) ? formattedAlt : formattedMain;
 }
 
-function formattedField(main, alt, currentValue, suggestion, options) {
-  const that = this;
+function formattedField(main: string, alt: string, currentValue: string, suggestion: any, options: any) {
   const formattedMain = highlightMatches(main, currentValue, options);
   const formattedAlt = highlightMatches(alt, currentValue, options);
 
   return chooseFormattedField(formattedMain, formattedAlt);
 }
 
-function formatResultInn(ctx, suggestion: Suggestion<SuggestionParty>, currentValue) {
-  const that = this;
+function formatResultInn(ctx: any, suggestion: Suggestion<SuggestionParty>, currentValue: string) {
   const inn = suggestion.data && suggestion.data.inn;
-  const innPartsLength = innPartsLengths[suggestion.data && suggestion.data.type];
+  const innPartsLength = suggestion.data && suggestion.data.type ? innPartsLengths[suggestion.data.type as keyof typeof innPartsLengths] : undefined;
   let innParts;
-  let formattedInn;
+  let formattedInn: any;
   const rDigit = /\d/;
 
   if (inn) {
     formattedInn = highlightMatches(inn, currentValue);
     if (innPartsLength) {
       formattedInn = [...formattedInn];
-      innParts = innPartsLength.map(function (partLength) {
+      innParts = innPartsLength.map(function (partLength: number) {
         let formattedPart = "";
         let ch;
 
@@ -70,28 +68,27 @@ export const PARTY_TYPE = {
     count: 1,
     locations_boost: null,
   },
-  getEnrichmentQuery(suggestion) {
+  getEnrichmentQuery(suggestion: Suggestion<SuggestionParty>) {
     return suggestion.data.hid;
   },
   geoEnabled: true,
-  formatResult(value, currentValue, suggestion, options = {}) {
-    const that = this;
-    const formattedInn = formatResultInn(that, suggestion, currentValue);
-    const formatterOGRN = highlightMatches(suggestion.data?.ogrn, currentValue);
-    const formattedInnOGRN = chooseFormattedField(formattedInn, formatterOGRN);
-    const formattedFIO = highlightMatches(suggestion.data?.management?.name, currentValue);
+  formatResult(this: any, value: string, currentValue: string, suggestion: Suggestion<SuggestionParty>, options: any = {}) {
+    const formattedInn = formatResultInn(this, suggestion, currentValue);
+    const formatterOGRN = highlightMatches(suggestion.data?.ogrn || "", currentValue);
+    const formattedInnOGRN = chooseFormattedField(formattedInn || "", formatterOGRN);
+    const formattedFIO = highlightMatches(suggestion.data?.management?.name || "", currentValue);
     let address = suggestion.data?.address?.value || "";
 
-    if (that.isMobile) {
+    if ((this as any).isMobile) {
       options.maxLength = 50;
     }
 
-    value = formattedField.call(that, value, suggestion.data?.name?.latin, currentValue, suggestion, options);
-    value = that.wrapFormattedValue(value, suggestion);
+    value = formattedField.call(this, value, suggestion.data?.name?.latin || "", currentValue, suggestion, options);
+    value = (this as any).wrapFormattedValue(value, suggestion);
 
     if (address) {
       address = address.replace(/^(\d{6}|Россия),\s+/i, "");
-      address = that.isMobile
+      address = (this as any).isMobile
         ? address.replace(new RegExp(`^([^${WORD_DELIMITERS}]+[${WORD_DELIMITERS}]+[^${WORD_DELIMITERS}]+).*`), "$1")
         : highlightMatches(address, currentValue, {
             unformattableTokens: ADDRESS_STOPWORDS,
@@ -100,8 +97,8 @@ export const PARTY_TYPE = {
 
     if (formattedInnOGRN || address || formattedFIO) {
       value +=
-        `<div class="${that.classes.subtext}">` +
-        `<span class="${that.classes.subtext_inline}">${formattedInnOGRN || ""}</span>${
+        `<div class="${(this as any).classes.subtext}">` +
+        `<span class="${(this as any).classes.subtext_inline}">${formattedInnOGRN || ""}</span>${
           chooseFormattedField(address, formattedFIO) || ""
         }</div>`;
     }

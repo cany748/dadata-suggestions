@@ -4,6 +4,41 @@ import { $fetch } from "ofetch";
 import { buildCacheKey, delay, generateId, highlightMatches, isPlainObject, objectsEqual, serialize, trim } from "./utils";
 import { getType } from "./types";
 import { CLASSES, DATA_ATTR_KEY, EVENT_NS, KEYS } from "./constants";
+import type { Suggestion, SuggestionAny } from "./types";
+
+// Simple Deferred implementation since cash-dom doesn't include one
+class Deferred<T = any> {
+  public promise: Promise<T>;
+  public resolve!: (value: T | PromiseLike<T>) => void;
+  public reject!: (reason?: any) => void;
+
+  constructor() {
+    this.promise = new Promise<T>((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
+  }
+
+  done(onFulfilled: (value: T) => void): this {
+    this.promise.then(onFulfilled);
+    return this;
+  }
+
+  fail(onRejected: (reason: any) => void): this {
+    this.promise.catch(onRejected);
+    return this;
+  }
+
+  always(onFinally: () => void): this {
+    this.promise.finally(onFinally);
+    return this;
+  }
+}
+
+// Extend cash-dom with Deferred
+($ as any).Deferred = function<T = any>() {
+  return new Deferred<T>();
+};
 
 const notificator = {
   chains: {} as Record<string, Function[]>,
@@ -80,7 +115,7 @@ const contains = function (a: Element, b: Element) {
  * @param suggestion
  * @param instance other Suggestions instance
  */
-function belongsToArea(suggestion, instance) {
+function belongsToArea(suggestion: any, instance: any) {
   const parentSuggestion = instance.selection;
   let result = parentSuggestion && parentSuggestion.data && instance.bounds;
 
@@ -132,7 +167,7 @@ const fiasParamNames = [
  * @param {string} kladrId
  * @returns {string}
  */
-function getSignificantKladrId(kladrId) {
+function getSignificantKladrId(kladrId: string) {
   const significantKladrId = kladrId.replace(/^(\d{2})(\d*?)(0+)$/g, "$1$2");
   const length = significantKladrId.length;
   let significantLength = -1;
