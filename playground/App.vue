@@ -13,7 +13,6 @@ import FieldSuggestions from "@/FieldSuggestions.vue";
 
 const options = {
   token: import.meta.env.VITE_DADATA_API_KEY,
-  type: "NAME",
   triggerSelectOnSpace: false,
   noCache: true,
   hint: false,

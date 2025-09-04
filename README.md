@@ -1,6 +1,10 @@
 # dadata-suggestions
 
-Попытка портировать [suggestions-jquery](https://github.com/hflabs/suggestions-jquery) на Vue 3
+Vue 3 порт библиотеки [suggestions-jquery](https://github.com/hflabs/suggestions-jquery) для автодополнения адресов, организаций, имен и других данных через API DaData.
+
+## Статус проекта
+
+🚧 **В разработке**
 
 ## Project Setup
 
@@ -25,3 +29,7 @@ bun run build
 ```sh
 bun lint
 ```
+
+## Оригинальная библиотека
+
+Этот проект основан на [suggestions-jquery](https://github.com/hflabs/suggestions-jquery) от HFLabs.

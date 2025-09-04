@@ -1,12 +1,13 @@
 import { arrayMinus, split, splitTokens } from "./utils";
+import type { Suggestion, SuggestionAny } from "./types";
 
 /**
  * Factory to create same parent checker function
  * @param preprocessFn called on each value before comparison
  * @returns {Function} same parent checker function
  */
-function sameParentChecker(preprocessFn) {
-  return function (suggestions) {
+function sameParentChecker(preprocessFn: (val: any) => any) {
+  return function (suggestions: any[]) {
     if (suggestions.length === 0) {
       return false;
     }
@@ -39,8 +40,8 @@ const haveSameParent = sameParentChecker(function (val) {
  * Возвращает индекс единственной подходящей подсказки
  * или -1, если подходящих нет или несколько.
  */
-function _matchByWords(stopwords, parentCheckerFn) {
-  return function (query, suggestions) {
+function _matchByWords(stopwords: string[], parentCheckerFn: (suggestions: any[]) => boolean) {
+  return function (query: string, suggestions: any[]) {
     let queryTokens;
     const matches = [];
 
@@ -71,7 +72,7 @@ function _matchByWords(stopwords, parentCheckerFn) {
  * Если элемент второго массива включает в себя элемент первого,
  * элементы считаются равными.
  */
-function minusWithPartialMatching(array1, array2) {
+function minusWithPartialMatching(array1: string[], array2: string[]) {
   if (!array2 || array2.length === 0) {
     return array1;
   }
@@ -97,7 +98,7 @@ const matchers = {
    * Matches query against suggestions, removing all the stopwords.
    */
   matchByNormalizedQuery(stopwords?: string[]) {
-    return function (query, suggestions) {
+    return function (query: string, suggestions: any[]) {
       const normalizedQuery = normalize(query, stopwords);
       const matches = [];
 
@@ -123,10 +124,10 @@ const matchers = {
   },
 
   matchByWords(stopwords?: string[]) {
-    return _matchByWords(stopwords, haveSameParent);
+    return _matchByWords(stopwords || [], haveSameParent);
   },
 
-  matchByWordsAddress(stopwords) {
+  matchByWordsAddress(stopwords: string[]) {
     return _matchByWords(stopwords, haveSameParent);
   },
 
@@ -138,9 +139,9 @@ const matchers = {
    *   "0445" vs { value: "ALFA-BANK", data: { "bic": "044525593" }} is a match
    */
   matchByFields<T extends Suggestion<SuggestionAny>>(fields: (((s: T) => string) | [(s: T) => string, string[]])[]) {
-    return function (query, suggestions) {
+    return function (query: string, suggestions: T[]) {
       const tokens = splitTokens(split(query));
-      let suggestionWords = [];
+      let suggestionWords: string[] = [];
 
       if (suggestions.length === 1) {
         if (fields) {
@@ -150,7 +151,7 @@ const matchers = {
               stopwords = getField[1];
               getField = getField[0];
             }
-            const fieldValue = getField(suggestions[0]);
+            const fieldValue = getField(suggestions[0]!);
             const fieldWords = fieldValue && splitTokens(split(fieldValue, stopwords));
 
             if (fieldWords && fieldWords.length > 0) {

@@ -2,8 +2,24 @@
 import $, { type Cash } from "cash-dom";
 import { $fetch } from "ofetch";
 import { buildCacheKey, delay, generateId, highlightMatches, isPlainObject, objectsEqual, serialize, trim } from "./utils";
-import { getType } from "./types";
 import { CLASSES, DATA_ATTR_KEY, EVENT_NS, KEYS } from "./constants";
+
+import { ADDRESS_TYPE } from "./types/address";
+import { NAME_TYPE } from "./types/name";
+import { PARTY_TYPE } from "./types/party";
+import { EMAIL_TYPE } from "./types/email";
+import { BANK_TYPE } from "./types/bank";
+import { FMS_TYPE } from "./types/fms";
+import { Outward } from "./types/outward";
+
+const types = {
+  NAME: NAME_TYPE,
+  ADDRESS: ADDRESS_TYPE,
+  PARTY: PARTY_TYPE,
+  EMAIL: EMAIL_TYPE,
+  BANK: BANK_TYPE,
+  FMS: FMS_TYPE,
+};
 
 const notificator = {
   chains: {} as Record<string, Function[]>,
@@ -80,7 +96,7 @@ const contains = function (a: Element, b: Element) {
  * @param suggestion
  * @param instance other Suggestions instance
  */
-function belongsToArea(suggestion, instance) {
+function belongsToArea(suggestion: any, instance: any) {
   const parentSuggestion = instance.selection;
   let result = parentSuggestion && parentSuggestion.data && instance.bounds;
 
@@ -132,7 +148,7 @@ const fiasParamNames = [
  * @param {string} kladrId
  * @returns {string}
  */
-function getSignificantKladrId(kladrId) {
+function getSignificantKladrId(kladrId: string) {
   const significantKladrId = kladrId.replace(/^(\d{2})(\d*?)(0+)$/g, "$1$2");
   const length = significantKladrId.length;
   let significantLength = -1;
@@ -469,7 +485,9 @@ class Suggestions {
 
     $.extend(that.options, suppliedOptions);
 
-    that.type = getType(that.options.type);
+    that.type = Object.prototype.hasOwnProperty.call(types, that.options.type)
+      ? types[that.options.type as keyof typeof types]
+      : Outward(that.options.type);
 
     // Check mandatory options
     $.each(

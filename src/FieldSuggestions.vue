@@ -27,7 +27,8 @@
 import { onMounted, onUnmounted, useTemplateRef } from "vue";
 import $ from "cash-dom";
 
-import { type Options, Suggestions } from "./main";
+import type { Options } from "./types";
+import { Suggestions } from "./main";
 import { DATA_ATTR_KEY } from "./constants";
 
 defineOptions({ inheritAttrs: false });
