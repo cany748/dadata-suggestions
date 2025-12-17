@@ -190,6 +190,24 @@ function nowrapLinkedParts(formattedStr: string) {
     .join(", ");
 }
 
+const escapeHtmlMap = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#x27;",
+  "/": "&#x2F;",
+} as const;
+
+function escapeHtml(str: string) {
+  if (str) {
+    for (const [ch, html] of Object.entries(escapeHtmlMap)) {
+      str = str.replace(new RegExp(ch, "g"), html);
+    }
+  }
+  return str;
+}
+
 /**
  * Makes HTML contents for suggestion item
  */
@@ -320,18 +338,7 @@ export function highlightMatches(value: string, currentValue: string, options?: 
 
   const formattedStr = chunks
     .map(function (chunk) {
-      let text = chunk.text;
-
-      for (const [ch, html] of Object.entries({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#x27;",
-        "/": "&#x2F;",
-      })) {
-        text = text.replace(new RegExp(ch, "g"), html);
-      }
+      let text = escapeHtml(chunk.text);
 
       if (text && chunk.matched) {
         text = `<strong>${text}</strong>`;
@@ -340,4 +347,38 @@ export function highlightMatches(value: string, currentValue: string, options?: 
     })
     .join("");
   return nowrapLinkedParts(formattedStr);
+}
+
+export function makeSuggestionLabel(suggestions: any[], suggestion: any, fieldNames?: Record<string, string>) {
+  const nameData = {} as Record<string, string>;
+  const rWords = new RegExp(`([^${WORD_DELIMITERS}]*)([${WORD_DELIMITERS}]*)`, "g");
+  let match;
+  let word: string | undefined;
+  const labels = [] as string[];
+
+  if (fieldNames && suggestions.some((s) => s.value === suggestion.value && s !== suggestion) && suggestion.data) {
+    for (const field of Object.keys(fieldNames)) {
+      const value = suggestion.data[field];
+      if (value) {
+        nameData[field] = formatToken(value);
+      }
+    }
+
+    if (Object.keys(nameData).length > 0) {
+      // eslint-disable-next-line no-cond-assign
+      while ((match = rWords.exec(formatToken(suggestion.value))) && (word = match[1])) {
+        for (const [i, value] of Object.entries(nameData)) {
+          if (value === word) {
+            labels.push(fieldNames[i]!);
+            delete nameData[i];
+            break;
+          }
+        }
+      }
+
+      if (labels.length > 0) {
+        return escapeHtml(labels.join(", "));
+      }
+    }
+  }
 }

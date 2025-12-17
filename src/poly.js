@@ -179,4 +179,4 @@ const Deferred = function () {
   // Public members - Ends
 };
 
-$.Deferred = Deferred;
+$.Deferred = () => new Deferred();

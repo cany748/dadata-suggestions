@@ -57,7 +57,7 @@ export const PARTY_TYPE = {
   matchers: [
     matchers.matchByFields<Suggestion<SuggestionParty>>([
       (d) => d?.value,
-      [(d) => d?.data.address.value, ADDRESS_STOPWORDS],
+      [(d) => d?.data?.address?.value, ADDRESS_STOPWORDS],
       (d) => d?.data?.inn,
       (d) => d?.data?.ogrn,
     ]),

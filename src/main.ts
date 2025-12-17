@@ -7,14 +7,28 @@ import { Suggestions } from "./suggestions";
 
 import { DATA_ATTR_KEY } from "./constants";
 
-import type { Options } from "./types";
+$.Suggestions = Suggestions;
 
-export const suggestions = (selector: string, options: Options) => {
-  const inputElement = $(selector) as any;
-  inputElement[0]?.[DATA_ATTR_KEY]?.dispose?.();
-  const instance = new Suggestions(inputElement, options);
-  inputElement[0]![DATA_ATTR_KEY] = instance as never;
-  return instance;
+$.fn.suggestions = function (options, args) {
+  if (arguments.length === 0) {
+    return this[0][DATA_ATTR_KEY];
+  }
+
+  return this.each(function () {
+    const inputElement = $(this);
+    let instance = inputElement[0][DATA_ATTR_KEY];
+
+    if (typeof options === "string") {
+      if (instance && typeof instance[options] === "function") {
+        instance[options](args);
+      }
+    } else {
+      // If instance already exists, destroy it:
+      if (instance && instance.dispose) {
+        instance.dispose();
+      }
+      instance = new Suggestions(this, options);
+      inputElement[0][DATA_ATTR_KEY] = instance;
+    }
+  });
 };
-
-export { Suggestions } from "./suggestions";

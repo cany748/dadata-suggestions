@@ -757,7 +757,6 @@ export type Options<T extends keyof SuggestionMap = keyof SuggestionMap> = {
   triggerSelectOnSpace?: boolean;
   noCache?: boolean;
   hint?: boolean | string;
-  scrollOnFocus?: boolean;
   addon?: string;
   onSelect?: (suggestion: Suggestion<SuggestionMap[T]>) => void | Promise<void>;
   formatResul?: (value: string, currentValue: string, suggestion: Suggestion<SuggestionMap[T]>) => string;
