@@ -37,6 +37,7 @@ function formatResultInn(ctx: any, suggestion: Suggestion<SuggestionParty>, curr
         let formattedPart = "";
         let ch;
 
+        // eslint-disable-next-line no-cond-assign
         while (partLength && (ch = formattedInn.shift())) {
           formattedPart += ch;
           if (rDigit.test(ch)) partLength--;

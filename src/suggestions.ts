@@ -163,13 +163,13 @@ function ajax(options: any) {
     }
   });
 
-  xhr.onerror = function () {
+  xhr.addEventListener("error", function () {
     deferred.reject(xhr, "error", xhr.statusText);
-  };
+  });
 
-  xhr.ontimeout = function () {
+  xhr.addEventListener("timeout", function () {
     deferred.reject(xhr, "timeout", "timeout");
-  };
+  });
 
   xhr.addEventListener("abort", function () {
     deferred.reject(xhr, "abort", "abort");
@@ -627,11 +627,13 @@ class Suggestions {
       function (option, available) {
         that[option] = available[that.options[option]];
         if (!that[option]) {
-          throw `\`${option}\` option is incorrect! Must be one of: ${available
-            .map(function (value, name) {
-              return `"${name}"`;
-            })
-            .join(", ")}`;
+          throw new Error(
+            `\`${option}\` option is incorrect! Must be one of: ${available
+              .map(function (value, name) {
+                return `"${name}"`;
+              })
+              .join(", ")}`,
+          );
         }
       },
     );
@@ -1089,7 +1091,7 @@ class Suggestions {
     const that = this;
     // treat suggestions value as restricted only if there is one constraint
     // and restrict_value is true
-    return that.options.restrict_value && that.constraints && Object.keys(that.constraints).length == 1;
+    return that.options.restrict_value && that.constraints && Object.keys(that.constraints).length === 1;
   }
 
   /**
@@ -1204,6 +1206,13 @@ class Suggestions {
       version: string;
     };
 
+    function triggerError(errorThrown) {
+      // If unauthorized
+      if (typeof that.options.onSearchError === "function") {
+        that.options.onSearchError.call(that.element, null, request, "error", errorThrown);
+      }
+    }
+
     request
       .done(function (status, textStatus, request) {
         if (status.search) {
@@ -1217,13 +1226,6 @@ class Suggestions {
       .fail(function () {
         triggerError(request.statusText);
       });
-
-    function triggerError(errorThrown) {
-      // If unauthorized
-      if (typeof that.options.onSearchError === "function") {
-        that.options.onSearchError.call(that.element, null, request, "error", errorThrown);
-      }
-    }
   }
 
   setupBounds(this: Suggestions) {
@@ -1824,6 +1826,7 @@ class Suggestions {
       that.cancelFocus = true;
       that.el.trigger("focus");
 
+      // eslint-disable-next-line no-cond-assign
       while ($el.length > 0 && !(index = $el.attr("data-index"))) {
         $el = $el.closest(`.${that.classes.suggestion}`);
       }
@@ -2128,6 +2131,7 @@ class Suggestions {
     let parentData;
     const params = {};
 
+    // eslint-disable-next-line no-cond-assign
     while (constraints instanceof $ && (parentInstance = constraints.suggestions()) && !(parentData = parentInstance?.selection?.data)) {
       constraints = parentInstance.constraints;
     }

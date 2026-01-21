@@ -1,4 +1,4 @@
-/* eslint-disable */
+/* eslint-disable eqeqeq, unicorn/no-this-assignment, prefer-rest-params, no-use-before-define, unicorn/prefer-spread, prefer-const, no-var, unused-imports/no-unused-vars, unicorn/no-thenable */
 import $ from "cash-dom";
 
 // Deferred definition
