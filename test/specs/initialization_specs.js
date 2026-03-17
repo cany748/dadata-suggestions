@@ -18,9 +18,8 @@ describe.only("Initialization", function () {
 
     it("Should create all additional components", function () {
       const instance = this.instance;
-      $.each(["$wrapper", "$container"], function (i, component) {
-        expect(instance[component].length).toEqual(1);
-      });
+      expect(instance.wrapper).toBeInstanceOf(HTMLElement);
+      expect(instance.container).toBeInstanceOf(HTMLElement);
     });
   }
 

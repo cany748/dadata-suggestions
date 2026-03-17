@@ -184,7 +184,7 @@ describe("After selecting", function () {
     this.instance.onValueChange();
     this.server.respond(helpers.responseFor(suggestions));
 
-    const $hint = this.instance.$container.find(".suggestions-hint");
+    const $hint = $(this.instance.container).find(".suggestions-hint");
     expect($hint.length).toEqual(1);
     expect(this.instance.hide).not.toHaveBeenCalled();
   });

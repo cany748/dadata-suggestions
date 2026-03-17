@@ -1,9 +1,63 @@
 import { CLASSES, WORD_DELIMITERS, WORD_PARTS_DELIMITERS } from "./constants";
 
+export function trigger(element: EventTarget, eventName: string, detail?: any[]): void {
+  const event = new CustomEvent(eventName, {
+    bubbles: true,
+    cancelable: true,
+    detail,
+  });
+  element.dispatchEvent(event);
+}
+
 export function isPlainObject(value: unknown) {
   if (typeof value !== "object" || value === null) return false;
   const proto = Object.getPrototypeOf(value);
   return proto === null || proto === Object.prototype;
+}
+
+/**
+ * Глубокое клонирование и слияние объектов (аналог $.extend)
+ */
+export function extend<T extends object>(deep: boolean, target: T, ...sources: any[]): T;
+export function extend<T extends object>(target: T, ...sources: any[]): T;
+export function extend(...args: any[]): any {
+  let deep = false;
+  let i = 0;
+
+  if (typeof args[0] === "boolean") {
+    deep = args[0];
+    i = 1;
+  }
+
+  const target = args[i] || {};
+  i++;
+
+  for (; i < args.length; i++) {
+    const source = args[i];
+    if (source == null) continue;
+
+    for (const key of Object.keys(source)) {
+      const srcVal = source[key];
+      const tgtVal = target[key];
+
+      // Avoid infinite loop
+      if (srcVal === target) continue;
+
+      if (deep && srcVal && (isPlainObject(srcVal) || Array.isArray(srcVal))) {
+        let clone: any;
+        if (Array.isArray(srcVal)) {
+          clone = Array.isArray(tgtVal) ? tgtVal : [];
+        } else {
+          clone = isPlainObject(tgtVal) ? tgtVal : {};
+        }
+        target[key] = extend(deep, clone, srcVal);
+      } else if (srcVal !== undefined) {
+        target[key] = srcVal;
+      }
+    }
+  }
+
+  return target;
 }
 
 let idCounter = 0;

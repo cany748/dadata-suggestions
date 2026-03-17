@@ -81,7 +81,9 @@ export const PARTY_TYPE = {
     const formattedFIO = highlightMatches(suggestion.data?.management?.name, currentValue);
     let address = suggestion.data?.address?.value || "";
 
-    if (this.isMobile) {
+    const isMobile = globalThis.innerWidth <= this.options.mobileWidth
+
+    if (isMobile) {
       options.maxLength = 50;
     }
 
@@ -90,7 +92,7 @@ export const PARTY_TYPE = {
 
     if (address) {
       address = address.replace(/^(\d{6}|Россия),\s+/i, "");
-      address = this.isMobile
+      address = isMobile
         ? address.replace(new RegExp(`^([^${WORD_DELIMITERS}]+[${WORD_DELIMITERS}]+[^${WORD_DELIMITERS}]+).*`), "$1")
         : highlightMatches(address, currentValue, {
             unformattableTokens: ADDRESS_STOPWORDS,

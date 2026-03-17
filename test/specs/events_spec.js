@@ -31,8 +31,8 @@ describe("Element events", function () {
     const suggestion = { value: "A", data: "B" };
     let eventArgs;
 
-    this.$input.on("suggestions-select", function (e, args) {
-      eventArgs = args;
+    this.input.addEventListener("suggestions-select", function (e) {
+      eventArgs = e.detail;
     });
 
     this.input.value = "A";
@@ -46,8 +46,8 @@ describe("Element events", function () {
   it("`suggestions-selectnothing` should be triggered", function () {
     let eventArgs;
 
-    this.$input.on("suggestions-selectnothing", function (e, args) {
-      eventArgs = args;
+    this.input.addEventListener("suggestions-selectnothing", function (e) {
+      eventArgs = e.detail;
     });
 
     this.instance.selectedIndex = -1;
@@ -63,8 +63,8 @@ describe("Element events", function () {
     const suggestion = { value: "A", data: "B" };
     let eventArgs;
 
-    this.$input.on("suggestions-invalidateselection", function (e, args) {
-      eventArgs = args;
+    this.input.addEventListener("suggestions-invalidateselection", function (e) {
+      eventArgs = e.detail;
     });
 
     this.input.value = "A";
@@ -101,22 +101,24 @@ describe("Element events", function () {
   });
 
   it("`suggestions-set` should be triggered", function () {
-    // this.$input is different with this.instance.el, thought contains same element
-    const $input = this.instance.el;
-    spyOn($input, "trigger");
+    let triggered = false;
+    this.input.addEventListener("suggestions-set", () => {
+      triggered = true;
+    });
 
     this.instance.setSuggestion({
       value: "somethind",
       data: {},
     });
 
-    expect($input.trigger).toHaveBeenCalledWith("suggestions-set");
+    expect(triggered).toBe(true);
   });
 
   it("`suggestions-fixdata` should be triggered", function () {
-    // this.$input is different with this.instance.el, thought contains same element
-    const $input = this.instance.el;
-    spyOn($input, "trigger");
+    let triggered = false;
+    this.input.addEventListener("suggestions-fixdata", () => {
+      triggered = true;
+    });
 
     this.input.value = "г Москва";
     this.instance.fixData();
@@ -132,6 +134,6 @@ describe("Element events", function () {
       ]),
     ]);
 
-    expect($input.trigger).toHaveBeenCalledWith("suggestions-fixdata");
+    expect(triggered).toBe(true);
   });
 });

@@ -31,7 +31,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Japaneese lives in Japan and love nonjapaneese"]));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toEqual(
@@ -45,7 +45,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Japaneese and non-japaneese"]));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toEqual(helpers.wrapFormattedValue("<strong>Japa</strong>neese and non-<strong>japa</strong>neese"));
@@ -57,7 +57,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["г Санкт-Петербург"]));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toEqual(helpers.wrapFormattedValue("г <strong>Санкт-Петер</strong>бург"));
@@ -69,7 +69,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Ростовская обл, г Ростов-на-Дону"]));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toContain("Ростов-<strong>на-Дон</strong>у");
@@ -81,7 +81,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Ростовская обл, г Ростов-на-Дону"]));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toContain("<strong>Ростов-на</strong>-<strong>Дон</strong>у");
@@ -94,7 +94,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["ОАО АЛЬФА-БАНК"]));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toContain("ОАО <strong>АЛЬФА</strong>-<strong>БАНК</strong>");
@@ -110,7 +110,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Приморский край, Партизанский р-н, поселок Николаевка"]));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
 
@@ -130,7 +130,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(['ООО "Фирма"']));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toEqual(helpers.wrapFormattedValue('ООО "<strong>Фирма</strong>"'));
@@ -147,7 +147,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Петров Петр Иванович"]));
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toEqual(helpers.wrapFormattedValue("<strong>Петр</strong>ов <strong>Петр</strong> <strong>Иванович</strong>"));
@@ -174,7 +174,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
     const html = $item.html();
 
     expect($item.length).toEqual(1);
@@ -208,7 +208,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
     const html = $item.html();
     const pattern = "<strong>54 03 23308 5</strong>".replace(/ /g, '<span class="suggestions-subtext-delimiter"></span>');
 
@@ -239,7 +239,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
     const html = $item.html();
     const pattern = "<strong>54 03 23</strong>308 5".replace(/ /g, '<span class="suggestions-subtext-delimiter"></span>');
 
@@ -263,7 +263,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toContain("<strong>ЗАО</strong> <strong>&amp;LT</strong> &lt;b&gt;bold&lt;/b&gt;");
@@ -288,7 +288,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($item.length).toEqual(1);
     expect($item.html()).toEqual(helpers.wrapFormattedValue("Филиал <strong>КАЛМЫЦ</strong>КИЙ ФИЛИАЛ АККРЕДИТОВАННОГО ОБРАЗОВАТ..."));
@@ -323,7 +323,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $items = this.instance.$container.children(".suggestions-suggestion");
+    const $items = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($items.length).toEqual(2);
     expect($items.eq(0).html()).toContain('<span class="suggestions-subtext suggestions-subtext_label">имя, отчество</span>');
@@ -354,7 +354,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
     const html = $item.html();
 
     expect($item.length).toEqual(1);
@@ -383,7 +383,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
     const html = $item.html();
 
     expect($item.length).toEqual(1);
@@ -413,7 +413,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
     const html = $item.html();
 
     expect($item.length).toEqual(1);
@@ -441,7 +441,7 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = this.instance.$container.children(".suggestions-suggestion");
+    const $item = $(this.instance.container).children(".suggestions-suggestion");
     const html = $item.html();
 
     expect($item.length).toEqual(1);
@@ -472,7 +472,7 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(suggestions));
 
-    const $items = this.instance.$container.children(".suggestions-suggestion");
+    const $items = $(this.instance.container).children(".suggestions-suggestion");
 
     expect($items.eq(0).html()).toContain("(бывш. ул <strong>Эсперан</strong>то)");
   });

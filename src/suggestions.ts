@@ -1,17 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-import $, { type Cash } from "cash-dom";
 import {
   buildCacheKey,
   delay,
+  extend,
   generateId,
   highlightMatches,
   isPlainObject,
   makeSuggestionLabel,
   objectsEqual,
   serialize,
+  trigger,
   trim,
 } from "./utils";
-import { CLASSES, DATA_ATTR_KEY, EVENT_NS, KEYS } from "./constants";
+import { CLASSES, DATA_ATTR_KEY, KEYS } from "./constants";
+import { Deferred } from "./poly";
 
 import { ADDRESS_TYPE } from "./types/address";
 import { NAME_TYPE } from "./types/name";
@@ -45,7 +47,6 @@ const notificator = {
 };
 
 export const DEFAULT_OPTIONS = {
-  $helpers: null,
   autoSelectFirst: false,
   containerClass: "suggestions-suggestions",
   count: 5,
@@ -123,7 +124,7 @@ const serviceMethods = {
  * Compatible with nise fakeServer for testing
  */
 function ajax(options: any) {
-  const deferred = $.Deferred();
+  const deferred = new Deferred();
   const xhr = new XMLHttpRequest();
 
   const method = options.type || "GET";
@@ -303,21 +304,21 @@ class ConstraintLocation {
     this.specificity = -1;
 
     if (isPlainObject(data) && instance.type.dataComponents) {
-      $.each(instance.type.dataComponents, (i, component) => {
+      for (const [i, component] of instance.type.dataComponents.entries()) {
         const fieldName = component.id;
         if (component.forLocations && data[fieldName]) {
           this.fields[fieldName] = data[fieldName];
           this.specificity = i;
         }
-      });
+      }
     }
 
     const fieldNames = Object.keys(this.fields);
     const fiasFieldNames = intersect(fieldNames, fiasParamNames);
     if (fiasFieldNames.length > 0) {
-      $.each(fiasFieldNames, (index, fieldName) => {
+      for (const fieldName of fiasFieldNames) {
         fiasFields[fieldName] = this.fields[fieldName];
-      });
+      }
       this.fields = fiasFields;
       this.specificity = this.getFiasSpecificity(fiasFieldNames);
     } else if (this.fields.kladr_id) {
@@ -350,11 +351,11 @@ class ConstraintLocation {
   getKladrSpecificity(kladrId) {
     let specificity = -1;
     const kladrLength = kladrId.length;
-    $.each(this.instance.type.dataComponents, function (i, component) {
+    for (const [i, component] of this.instance.type.dataComponents.entries()) {
       if (component.kladrFormat && kladrLength === component.kladrFormat.digits) {
         specificity = i;
       }
-    });
+    }
     return specificity;
   }
 
@@ -373,11 +374,11 @@ class ConstraintLocation {
    */
   getFiasSpecificity(fiasFieldNames) {
     let specificity = -1;
-    $.each(this.instance.type.dataComponents, function (i, component) {
+    for (const [i, component] of this.instance.type.dataComponents.entries()) {
       if (component.fiasType && fiasFieldNames.includes(component.fiasType) && specificity < i) {
         specificity = i;
       }
-    });
+    }
     return specificity;
   }
 
@@ -386,9 +387,10 @@ class ConstraintLocation {
     if (this.fields.kladr_id) {
       return !!data.kladr_id && data.kladr_id.indexOf(this.significantKladr) === 0;
     } else {
-      $.each(this.fields, function (fieldName, value) {
-        return (result = !!data[fieldName] && data[fieldName].toLowerCase() === value.toLowerCase());
-      });
+      for (const [fieldName, value] of Object.entries(this.fields)) {
+        result = !!data[fieldName] && data[fieldName].toLowerCase() === (value as string).toLowerCase();
+        if (!result) break;
+      }
       return result;
     }
   }
@@ -434,7 +436,6 @@ class Constraint {
 
 class Suggestions {
   public element: HTMLInputElement;
-  public el: Cash;
   public suggestions: Suggestion<SuggestionAny>[];
   public badQueries: string[];
   public selectedIndex: number;
@@ -448,12 +449,10 @@ class Suggestions {
   public enrichPhase: any;
   public onChangeTimeout: number | null;
   public triggering: Record<string, any>;
-  public $wrapper: any;
+  public wrapper: HTMLElement | null;
   public options: any;
   public classes: typeof CLASSES;
   public selection: any;
-  public $viewport: Cash;
-  public $body: Cash;
   public type: any;
   public status: Record<string, any>;
   public uniqueId: string;
@@ -462,15 +461,16 @@ class Suggestions {
   public geoLocationValue: any;
   public bounds: any;
   public constraints: any;
-  $container: Cash | undefined;
-  cancelBlur: boolean;
-  cancelFocus: boolean;
-  visible: boolean;
+  public container: HTMLElement | null;
+  public cancelBlur: boolean;
+  public cancelFocus: boolean;
+  public visible: boolean;
+  public dropdownDisabled: boolean;
+  public requestMode: any;
 
   constructor(el: HTMLInputElement, options: any) {
     // Shared variables:
     this.element = el;
-    this.el = $(el);
     this.suggestions = [];
     this.badQueries = [];
     this.selectedIndex = -1;
@@ -479,51 +479,48 @@ class Suggestions {
     this.cachedResponse = {};
     this.enrichmentCache = {};
     this.abortController = new AbortController();
-    this.inputPhase = $.Deferred();
-    this.fetchPhase = $.Deferred();
-    this.enrichPhase = $.Deferred();
+    this.inputPhase = new Deferred();
+    this.fetchPhase = new Deferred();
+    this.enrichPhase = new Deferred();
     this.onChangeTimeout = null;
     this.triggering = {};
-    this.$wrapper = null;
+    this.wrapper = null;
+    this.container = null;
     this.options = { ...DEFAULT_OPTIONS, ...options };
     this.classes = CLASSES;
     this.selection = null;
-    this.$viewport = $(globalThis);
-    this.$body = $(document.body);
     this.type = null;
     this.status = {};
     this.currentRequest = null;
     this.cancelBlur = false;
     this.cancelFocus = false;
     this.visible = false;
+    this.dropdownDisabled = false;
+    this.requestMode = null;
 
-    this.el
-      // if it stops working, see https://stackoverflow.com/q/15738259
-      // chrome is constantly changing this logic
-      .attr("autocomplete", "new-password")
-      .attr("autocorrect", "off")
-      .attr("autocapitalize", "off")
-      .attr("spellcheck", "false")
-      .addClass("suggestions-input")
-      .css("box-sizing", "border-box");
+    // if it stops working, see https://stackoverflow.com/q/15738259
+    // chrome is constantly changing this logic
+    this.element.setAttribute("autocomplete", "new-password");
+    this.element.setAttribute("autocorrect", "off");
+    this.element.setAttribute("autocapitalize", "off");
+    this.element.setAttribute("spellcheck", "false");
+    this.element.classList.add("suggestions-input");
+    this.element.style.boxSizing = "border-box";
 
     this.uniqueId = generateId("i");
     this.createWrapper();
     this.notify("initialize");
-    this.bindWindowEvents();
-    this.setOptions();
-    this.inferIsMobile(this);
+    this.setOptions(undefined);
     this.notify("ready");
   }
 
   dispose() {
     const that = this;
     that.notify("dispose");
-    delete that.el[0][DATA_ATTR_KEY];
-    that.el.removeClass("suggestions-input");
-    that.unbindWindowEvents();
+    delete (that.element as any)[DATA_ATTR_KEY];
+    that.element.classList.remove("suggestions-input");
     that.removeWrapper();
-    that.el.trigger("suggestions-dispose");
+    trigger(that.element, "suggestions-dispose");
   }
 
   notify(chainName) {
@@ -537,121 +534,46 @@ class Suggestions {
   }
 
   createWrapper() {
-    const that = this;
+    const template = document.createElement("template");
+    template.innerHTML = '<div class="suggestions-wrapper"/>';
 
-    that.$wrapper = $('<div class="suggestions-wrapper"/>');
-    that.el.after(that.$wrapper);
+    this.wrapper = template.content.firstChild as HTMLElement;
+    this.element.parentNode?.insertBefore(this.wrapper, this.element.nextSibling);
 
-    that.$wrapper.on(`mousedown${EVENT_NS}`, (e) => {
-      that.onMousedown(e, that);
-    });
+    this.wrapper.addEventListener("mousedown", (e) => e.preventDefault());
   }
 
   removeWrapper() {
-    const that = this;
-
-    if (that.$wrapper) {
-      that.$wrapper.remove();
+    if (this.wrapper) {
+      this.wrapper.remove();
     }
-    $(that.options.$helpers).off(EVENT_NS);
-  }
-
-  /** This whole handler is needed to prevent blur event on textbox
-   * when suggestion is clicked (blur leads to suggestions hide, so we need to prevent it).
-   * See https://github.com/jquery/jquery-ui/blob/master/ui/autocomplete.js for details
-   */
-  onMousedown(e, ctx) {
-    const that = ctx;
-
-    // prevent moving focus out of the text field
-    e.preventDefault();
-
-    // IE doesn't prevent moving focus even with e.preventDefault()
-    // so we set a flag to know when we should ignore the blur event
-    that.cancelBlur = true;
-    delay(function () {
-      delete that.cancelBlur;
-    });
-
-    // clicking on the scrollbar causes focus to shift to the body
-    // but we can't detect a mouseup or a click immediately afterward
-    // so we have to track the next mousedown and close the menu if
-    // the user clicks somewhere outside of the autocomplete
-    if ($(e.target).closest(".ui-menu-item").length === 0) {
-      delay(function () {
-        $(document).one("mousedown", function (e) {
-          let $elements = that.el.add(that.$wrapper).add(that.options.$helpers);
-
-          if (that.options.floating) {
-            $elements = $elements.add(that.$container);
-          }
-
-          $elements = $elements.filter(function () {
-            return this === e.target || contains(this, e.target);
-          });
-
-          if ($elements.length === 0) {
-            that.hide();
-          }
-        });
-      });
-    }
-  }
-
-  bindWindowEvents() {
-    this.$viewport.on(`resize${EVENT_NS}${this.uniqueId}`, () => {
-      this.inferIsMobile(this);
-    });
-  }
-
-  unbindWindowEvents() {
-    this.$viewport.off(`resize${EVENT_NS}${this.uniqueId}`);
   }
 
   // Configuration methods
 
   setOptions(suppliedOptions) {
-    const that = this;
+    if (suppliedOptions) {
+      extend(this.options, suppliedOptions);
+    }
 
-    $.extend(that.options, suppliedOptions);
-
-    that.type = Object.prototype.hasOwnProperty.call(types, that.options.type)
-      ? types[that.options.type as keyof typeof types]
-      : Outward(that.options.type);
+    this.type = Object.prototype.hasOwnProperty.call(types, this.options.type)
+      ? types[this.options.type as keyof typeof types]
+      : Outward(this.options.type);
 
     // Check mandatory options
-    $.each(
-      {
-        requestMode: requestModes,
-      },
-      function (option, available) {
-        that[option] = available[that.options[option]];
-        if (!that[option]) {
-          throw new Error(
-            `\`${option}\` option is incorrect! Must be one of: ${available
-              .map(function (value, name) {
-                return `"${name}"`;
-              })
-              .join(", ")}`,
-          );
-        }
-      },
-    );
+    this.requestMode = requestModes[this.options.requestMode as keyof typeof requestModes];
+    if (!this.requestMode) {
+      throw new Error(
+        `\`requestMode\` option is incorrect! Must be one of: ${Object.keys(requestModes)
+          .map((name) => `"${name}"`)
+          .join(", ")}`,
+      );
+    }
 
-    $(that.options.$helpers)
-      .off(EVENT_NS)
-      .on(`mousedown${EVENT_NS}`, (e) => {
-        that.onMousedown(e, that);
-      });
-
-    that.notify("setOptions");
+    this.notify("setOptions");
   }
 
   // Common public methods
-
-  inferIsMobile(ctx) {
-    ctx.isMobile = ctx.$viewport.width() <= ctx.options.mobileWidth;
-  }
 
   clearCache() {
     this.cachedResponse = {};
@@ -668,21 +590,20 @@ class Suggestions {
     that.selection = null;
     that.hide();
     that.suggestions = [];
-    that.el.val("");
-    that.el.trigger("suggestions-clear");
+    that.element.value = "";
+    trigger(that.element, "suggestions-clear");
     that.notify("clear");
     that.trigger("InvalidateSelection", currentSelection);
   }
 
   update() {
-    const that = this;
-    const query = that.el.val();
+    const query = this.element.value;
 
-    that.currentValue = query;
-    if (that.isQueryRequestable(query)) {
-      that.updateSuggestions(query);
+    this.currentValue = query;
+    if (this.isQueryRequestable(query)) {
+      this.updateSuggestions(query);
     } else {
-      that.hide();
+      this.hide();
     }
   }
 
@@ -692,7 +613,7 @@ class Suggestions {
     let value;
 
     if (isPlainObject(suggestion) && isPlainObject(suggestion.data)) {
-      suggestion = $.extend(true, {}, suggestion);
+      suggestion = extend(true, {}, suggestion);
 
       if (that.bounds.own.length > 0) {
         that.checkValueBounds(suggestion);
@@ -709,9 +630,9 @@ class Suggestions {
       that.suggestions = [suggestion];
       value = that.getSuggestionValue(suggestion) || "";
       that.currentValue = value;
-      that.el.val(value);
+      that.element.value = value;
       that.abortRequest();
-      that.el.trigger("suggestions-set");
+      trigger(that.element, "suggestions-set");
     }
   }
 
@@ -722,8 +643,8 @@ class Suggestions {
   fixData() {
     const that = this;
     const fullQuery = that.extendedCurrentValue();
-    const currentValue = that.el.val();
-    const resolver = $.Deferred();
+    const currentValue = that.element.value;
+    const resolver = new Deferred();
 
     resolver
       .done(function (suggestion) {
@@ -731,13 +652,13 @@ class Suggestions {
           hasBeenEnriched: true,
         });
         if (!that.currentValue) {
-          that.el.val(currentValue);
+          that.element.value = currentValue;
         }
-        that.el.trigger("suggestions-fixdata", suggestion);
+        trigger(that.element, "suggestions-fixdata", [suggestion]);
       })
       .fail(function () {
         that.selection = null;
-        that.el.trigger("suggestions-fixdata");
+        trigger(that.element, "suggestions-fixdata");
       });
 
     if (that.isQueryRequestable(fullQuery)) {
@@ -773,24 +694,22 @@ class Suggestions {
    * @returns {String} current value prepended by parents' values
    */
   extendedCurrentValue() {
-    const that = this;
-    const parentInstance = that.getParentInstance();
-    const parentValue = parentInstance && parentInstance.extendedCurrentValue();
-    const currentValue = trim(that.el.val());
+    const parentInstance = this.getParentInstance();
+    const parentValue = parentInstance ? parentInstance.extendedCurrentValue() : "";
+    const currentValue = trim(this.element.value);
 
     return [parentValue, currentValue].filter((e) => !!e).join(" ");
   }
 
-  getAjaxParams(method: string, custom: any) {
-    const that = this;
-    const token = typeof that.options.token === "string" ? that.options.token.trim() : "";
-    const partner = typeof that.options.partner === "string" ? that.options.partner.trim() : "";
-    let serviceUrl = that.options.serviceUrl;
-    const url = that.options.url;
-    const serviceMethod = serviceMethods[method];
-    const params = $.extend(
+  getAjaxParams(method: string, custom?: any) {
+    const token = typeof this.options.token === "string" ? this.options.token.trim() : "";
+    const partner = typeof this.options.partner === "string" ? this.options.partner.trim() : "";
+    let serviceUrl = this.options.serviceUrl;
+    const url = this.options.url;
+    const serviceMethod = serviceMethods[method as keyof typeof serviceMethods];
+    const params = extend(
       {
-        timeout: that.options.timeout,
+        timeout: this.options.timeout,
       },
       serviceMethod.defaultParams,
     );
@@ -804,7 +723,7 @@ class Suggestions {
       }
       serviceUrl += method;
       if (serviceMethod.addTypeInUrl) {
-        serviceUrl += `/${that.type.urlSuffix}`;
+        serviceUrl += `/${this.type.urlSuffix}`;
       }
     }
 
@@ -821,14 +740,14 @@ class Suggestions {
     if (!params.xhrFields) {
       params.xhrFields = {};
     }
-    $.extend(params.headers, that.options.headers, headers);
+    extend(params.headers, this.options.headers, headers);
     // server sets Access-Control-Allow-Origin: *
     // which requires no credentials
     params.xhrFields.withCredentials = false;
 
     params.url = serviceUrl;
 
-    return $.extend(params, custom);
+    return extend(params, custom);
   }
 
   getFetchParams(method: string, body?: string) {
@@ -854,29 +773,25 @@ class Suggestions {
   }
 
   isQueryRequestable(query) {
-    const that = this;
-    let result;
+    let result = query.length >= this.options.minChars;
 
-    result = query.length >= that.options.minChars;
-
-    if (result && that.type.isQueryRequestable) {
-      result = that.type.isQueryRequestable.call(that, query);
+    if (result && this.type.isQueryRequestable) {
+      result = this.type.isQueryRequestable.call(this, query);
     }
 
     return result;
   }
 
   constructRequestParams(query, customParams) {
-    const that = this;
-    const options = that.options;
-    const params = typeof options.params === "function" ? options.params.call(that.element, query) : $.extend({}, options.params);
+    const options = this.options;
+    const params = typeof options.params === "function" ? options.params.call(this.element, query) : extend({}, options.params);
 
-    if (that.type.constructRequestParams) {
-      $.extend(params, that.type.constructRequestParams.call(that));
+    if (this.type.constructRequestParams) {
+      extend(params, this.type.constructRequestParams.call(this));
     }
-    $.each(that.notify("requestParams"), function (i, hookParams) {
-      $.extend(params, hookParams);
-    });
+    for (const hookParams of this.notify("requestParams")) {
+      extend(params, hookParams);
+    }
     params[options.paramName] = query;
     if (!Number.isNaN(Number.parseFloat(options.count)) && Number.isFinite(options.count) && options.count > 0) {
       params.count = options.count;
@@ -885,14 +800,12 @@ class Suggestions {
       params.language = options.language;
     }
 
-    return $.extend(params, customParams);
+    return extend(params, customParams);
   }
 
   updateSuggestions(query) {
-    const that = this;
-
-    that.fetchPhase = that.getSuggestions(query).done(function (suggestions) {
-      that.assignSuggestions(suggestions, query);
+    this.fetchPhase = this.getSuggestions(query).done((suggestions) => {
+      this.assignSuggestions(suggestions, query);
     });
   }
 
@@ -913,7 +826,7 @@ class Suggestions {
     const method = (requestOptions && requestOptions.method) || that.requestMode.method;
     const params = that.constructRequestParams(query, customParams);
     const cacheKey = buildCacheKey(params);
-    const resolver = $.Deferred();
+    const resolver = new Deferred();
 
     const response = that.cachedResponse[cacheKey];
     if (response && Array.isArray(response.suggestions)) {
@@ -980,18 +893,17 @@ class Suggestions {
       return false;
     }
 
-    let result = false;
-    $.each(this.badQueries, function (i, query) {
-      return !(result = q.indexOf(query) === 0);
-    });
-    return result;
+    for (const query of this.badQueries) {
+      if (q.indexOf(query) === 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   abortRequest() {
-    const that = this;
-
-    if (that.currentRequest) {
-      that.currentRequest.abort();
+    if (this.currentRequest) {
+      this.currentRequest.abort();
     }
   }
 
@@ -1000,18 +912,17 @@ class Suggestions {
    * @return {Boolean} response contains acceptable data
    */
   processResponse(response) {
-    const that = this;
     let suggestions;
 
     if (!response || !Array.isArray(response.suggestions)) {
       return false;
     }
 
-    that.verifySuggestionsFormat(response.suggestions);
-    that.setUnrestrictedValues(response.suggestions);
+    this.verifySuggestionsFormat(response.suggestions);
+    this.setUnrestrictedValues(response.suggestions);
 
-    if (typeof that.options.onSuggestionsFetch === "function") {
-      suggestions = that.options.onSuggestionsFetch.call(that.element, response.suggestions);
+    if (typeof this.options.onSuggestionsFetch === "function") {
+      suggestions = this.options.onSuggestionsFetch.call(this.element, response.suggestions);
       if (Array.isArray(suggestions)) {
         response.suggestions = suggestions;
       }
@@ -1022,9 +933,9 @@ class Suggestions {
 
   verifySuggestionsFormat(suggestions) {
     if (typeof suggestions[0] === "string") {
-      $.each(suggestions, function (i, value) {
-        suggestions[i] = { value, data: null };
-      });
+      for (let i = 0; i < suggestions.length; i++) {
+        suggestions[i] = { value: suggestions[i], data: null };
+      }
     }
   }
 
@@ -1038,22 +949,21 @@ class Suggestions {
    * @return {string}
    */
   getSuggestionValue(suggestion, selectionOptions) {
-    const that = this;
-    const formatSelected = that.options.formatSelected || that.type.formatSelected;
+    const formatSelected = this.options.formatSelected || this.type.formatSelected;
     const hasSameValues = selectionOptions && selectionOptions.hasSameValues;
     const hasBeenEnriched = selectionOptions && selectionOptions.hasBeenEnriched;
     let formattedValue;
     let typeFormattedValue = null;
 
     if (typeof formatSelected === "function") {
-      formattedValue = formatSelected.call(that, suggestion);
+      formattedValue = formatSelected.call(this, suggestion);
     }
 
     if (typeof formattedValue !== "string") {
       formattedValue = suggestion.value;
 
-      if (that.type.getSuggestionValue) {
-        typeFormattedValue = that.type.getSuggestionValue(that, {
+      if (this.type.getSuggestionValue) {
+        typeFormattedValue = this.type.getSuggestionValue(this, {
           suggestion,
           hasSameValues,
           hasBeenEnriched,
@@ -1069,44 +979,37 @@ class Suggestions {
   }
 
   hasSameValues(suggestion) {
-    let hasSame = false;
-
-    $.each(this.suggestions, function (i, anotherSuggestion) {
+    for (const anotherSuggestion of this.suggestions) {
       if (anotherSuggestion.value === suggestion.value && anotherSuggestion !== suggestion) {
-        hasSame = true;
-        return false;
+        return true;
       }
-    });
-
-    return hasSame;
+    }
+    return false;
   }
 
   assignSuggestions(suggestions, query) {
-    const that = this;
-    that.suggestions = suggestions;
-    that.notify("assignSuggestions", query);
+    this.suggestions = suggestions;
+    this.notify("assignSuggestions");
   }
 
   shouldRestrictValues() {
-    const that = this;
     // treat suggestions value as restricted only if there is one constraint
     // and restrict_value is true
-    return that.options.restrict_value && that.constraints && Object.keys(that.constraints).length === 1;
+    return this.options.restrict_value && this.constraints && Object.keys(this.constraints).length === 1;
   }
 
   /**
    * Fills suggestion.unrestricted_value property
    */
   setUnrestrictedValues(suggestions) {
-    const that = this;
-    const shouldRestrict = that.shouldRestrictValues();
-    const label = that.getFirstConstraintLabel();
+    const shouldRestrict = this.shouldRestrictValues();
+    const label = this.getFirstConstraintLabel();
 
-    $.each(suggestions, function (i, suggestion) {
+    for (const suggestion of suggestions) {
       if (!suggestion.unrestricted_value) {
         suggestion.unrestricted_value = shouldRestrict ? `${label}, ${suggestion.value}` : suggestion.value;
       }
-    });
+    }
   }
 
   areSuggestionsSame(a, b) {
@@ -1114,16 +1017,15 @@ class Suggestions {
   }
 
   getNoSuggestionsHint() {
-    const that = this;
-    if (that.options.noSuggestionsHint === false) {
+    if (this.options.noSuggestionsHint === false) {
       return false;
     }
-    return that.options.noSuggestionsHint || that.type.noSuggestionsHint;
+    return this.options.noSuggestionsHint || this.type.noSuggestionsHint;
   }
 
   enrichSuggestion(this: Suggestions, suggestion, selectionOptions) {
     const that = this;
-    const resolver = $.Deferred();
+    const resolver = new Deferred();
 
     if (
       !that.options.enrichmentEnabled ||
@@ -1218,7 +1120,7 @@ class Suggestions {
         if (status.search) {
           const plan = request.getResponseHeader("X-Plan");
           status.plan = plan;
-          $.extend(that.status, status);
+          extend(that.status, status);
         } else {
           triggerError("Service Unavailable");
         }
@@ -1249,20 +1151,20 @@ class Suggestions {
       : [];
 
     if (!boundsAvailable.includes(boundFrom)) {
-      boundFrom = null;
+      boundFrom = undefined;
     }
 
     if (!boundsAvailable.includes(boundTo)) {
-      boundTo = null;
+      boundTo = undefined;
     }
 
     if (boundFrom || boundTo) {
       boundIsOwn = !boundFrom;
       for (const bound of boundsAvailable) {
-        if (bound == boundFrom) boundIsOwn = true;
+        if (bound === boundFrom) boundIsOwn = true;
         boundsAll.push(bound);
         if (boundIsOwn) boundsOwn.push(bound);
-        if (bound == boundTo) break;
+        if (bound === boundTo) break;
       }
     }
 
@@ -1341,23 +1243,19 @@ class Suggestions {
   }
 
   bindElementEvents() {
-    this.el.on(`keydown${EVENT_NS}`, (e: KeyboardEvent) => {
-      this.onElementKeyDown(e);
-    });
-    // IE is buggy, it doesn't trigger `input` on text deletion, so use following events
-    this.el.on([`keyup${EVENT_NS}`, `cut${EVENT_NS}`, `paste${EVENT_NS}`, `input${EVENT_NS}`].join(" "), (e: KeyboardEvent) => {
-      this.onElementKeyUp(e);
-    });
-    this.el.on(`blur${EVENT_NS}`, () => {
-      this.onElementBlur();
-    });
-    this.el.on(`focus${EVENT_NS}`, () => {
-      this.onElementFocus();
-    });
+    this.element.addEventListener("keydown", this.onElementKeyDown.bind(this));
+    this.element.addEventListener("keyup", this.onElementKeyUp.bind(this));
+    this.element.addEventListener("input", this.onElementKeyUp.bind(this));
+    this.element.addEventListener("blur", this.onElementBlur.bind(this));
+    this.element.addEventListener("focus", this.onElementFocus.bind(this));
   }
 
   unbindElementEvents() {
-    this.el.off(EVENT_NS);
+    this.element.removeEventListener("keydown", this.onElementKeyDown);
+    this.element.removeEventListener("keyup", this.onElementKeyUp);
+    this.element.removeEventListener("input", this.onElementKeyUp);
+    this.element.removeEventListener("blur", this.onElementBlur);
+    this.element.removeEventListener("focus", this.onElementFocus);
   }
 
   onElementBlur() {
@@ -1413,7 +1311,7 @@ class Suggestions {
 
     switch (e.which) {
       case KEYS.ESC: {
-        this.el.val(this.currentValue);
+        this.element.value = this.currentValue;
         this.hide();
         this.abortRequest();
         break;
@@ -1442,7 +1340,7 @@ class Suggestions {
           }).fail(() => {
             // If all data fetched but nothing selected
             this.currentValue += " ";
-            this.el.val(this.currentValue);
+            this.element.value = this.currentValue;
             this.proceedChangedValue();
           });
         }
@@ -1479,7 +1377,7 @@ class Suggestions {
     if (this.onChangeTimeout) clearTimeout(this.onChangeTimeout);
     this.inputPhase.reject();
 
-    if (this.currentValue !== this.el.val()) {
+    if (this.currentValue !== this.element.value) {
       this.proceedChangedValue();
     }
   }
@@ -1488,7 +1386,8 @@ class Suggestions {
     // Cancel fetching, because it became obsolete
     this.abortRequest();
 
-    this.inputPhase = $.Deferred().done(() => {
+    this.inputPhase = new Deferred();
+    this.inputPhase.done(() => {
       this.onValueChange();
     });
 
@@ -1520,7 +1419,7 @@ class Suggestions {
   completeOnFocus() {
     if (document.activeElement === this.element) {
       this.update();
-      if (this.isMobile) {
+      if (globalThis.innerWidth <= this.options.mobileWidth) {
         this.setCursorAtEnd();
       }
     }
@@ -1531,24 +1430,16 @@ class Suggestions {
   }
 
   isCursorAtEnd() {
-    const that = this;
-    const valLength = that.el.val().length;
-    let selectionStart;
-    let range;
+    const valLength = this.element.value.length;
 
     // `selectionStart` and `selectionEnd` are not supported by some input types
     try {
-      selectionStart = that.element.selectionStart;
+      const selectionStart = this.element.selectionStart;
       if (typeof selectionStart === "number") {
         return selectionStart === valLength;
       }
     } catch {}
 
-    if (document.selection) {
-      range = document.selection.createRange();
-      range.moveStart("character", -valLength);
-      return valLength === range.text.length;
-    }
     return true;
   }
 
@@ -1582,7 +1473,7 @@ class Suggestions {
    */
   selectCurrentValue(selectionOptions) {
     const that = this;
-    const result = $.Deferred();
+    const result = new Deferred();
 
     // force onValueChange to be executed if it has been deferred
     that.inputPhase.resolve();
@@ -1620,7 +1511,7 @@ class Suggestions {
     const that = this;
 
     if (!that.requestMode.userSelect) {
-      that.select(0);
+      that.select(0, {});
     }
   }
 
@@ -1631,11 +1522,10 @@ class Suggestions {
   findSuggestionIndex() {
     const that = this;
     let index = that.selectedIndex;
-    let value;
 
     if (index === -1) {
       // matchers always operate with trimmed strings
-      value = that.el.val().trim();
+      const value = that.element.value.trim();
       if (value) {
         that.type.matchers.some(function (matcher) {
           index = matcher(value, that.suggestions);
@@ -1674,8 +1564,8 @@ class Suggestions {
 
     const hasSameValues = that.hasSameValues(suggestion);
 
-    that.enrichSuggestion(suggestion, selectionOptions).done(function (enrichedSuggestion, hasBeenEnriched) {
-      const newSelectionOptions = $.extend(
+    that.enrichSuggestion(suggestion, selectionOptions)?.done(function (enrichedSuggestion: any, hasBeenEnriched: boolean) {
+      const newSelectionOptions = extend(
         {
           hasBeenEnriched,
           hasSameValues,
@@ -1726,7 +1616,7 @@ class Suggestions {
       if (that.currentValue && !selectionOptions.noSpace && !assumeDataComplete) {
         that.currentValue += " ";
       }
-      that.el.val(that.currentValue);
+      that.element.value = that.currentValue;
     }
 
     if (that.currentValue) {
@@ -1745,7 +1635,7 @@ class Suggestions {
     that.shareWithParent(suggestion);
   }
 
-  onSelectComplete(continueSelecting) {
+  onSelectComplete(continueSelecting: boolean) {
     const that = this;
 
     if (continueSelecting) {
@@ -1771,68 +1661,71 @@ class Suggestions {
     if (typeof callback === "function") {
       callback.apply(this.element, args);
     }
-    this.el.trigger(`suggestions-${event.toLowerCase()}`, args);
+
+    trigger(this.element, `suggestions-${event.toLowerCase()}`, args);
     this.triggering[event] = false;
   }
 
   createContainer() {
-    const that = this;
-    const $container = $("<div/>").addClass("suggestions-suggestions").css({ display: "none" });
+    const container = document.createElement("div");
+    container.classList.add("suggestions-suggestions");
+    container.style.display = "none";
 
-    that.$container = $container;
+    this.container = container;
 
-    $container.on(`click${EVENT_NS}`, ".suggestions-suggestion", (e) => {
-      that.onSuggestionClick(e, that);
+    container.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest(".suggestions-suggestion")) {
+        this.onSuggestionClick(e);
+      }
     });
   }
 
   showContainer() {
-    this.$container.appendTo(this.options.floating ? this.$body : this.$wrapper);
+    const parent = this.options.floating ? document.body : this.wrapper;
+    if (this.container && parent) {
+      parent.append(this.container);
+    }
   }
 
   getContainer() {
-    return this.$container.get(0);
+    return this.container;
   }
 
   removeContainer() {
-    const that = this;
-
-    if (that.options.floating) {
-      that.$container.remove();
+    if (this.options.floating && this.container) {
+      this.container.remove();
     }
   }
 
   setContainerOptions() {
-    const that = this;
-    const mousedownEvent = `mousedown${EVENT_NS}`;
-
-    that.$container.off(mousedownEvent);
-    if (that.options.floating) {
-      that.$container.on(mousedownEvent, (e) => {
-        that.onMousedown(e, that);
-      });
+    const listener = (e: Event) => e.preventDefault();
+    if (this.container) {
+      this.container.removeEventListener("mousedown", listener);
+      if (this.options.floating) {
+        this.container.addEventListener("mousedown", listener);
+      }
     }
   }
 
   /**
    * Listen for click event on suggestions list:
    */
-  onSuggestionClick(e, ctx) {
-    const that = ctx;
-    let $el = $(e.target);
-    let index;
+  onSuggestionClick(e) {
+    let el = e.target as HTMLElement | null;
+    let index: string | null = null;
 
-    if (!that.dropdownDisabled) {
-      that.cancelFocus = true;
-      that.el.trigger("focus");
+    if (!this.dropdownDisabled) {
+      this.cancelFocus = true;
+      this.element.focus();
 
       // eslint-disable-next-line no-cond-assign
-      while ($el.length > 0 && !(index = $el.attr("data-index"))) {
-        $el = $el.closest(`.${that.classes.suggestion}`);
+      while (el && !(index = el.dataset.index)) {
+        el = el.closest(`.${this.classes.suggestion}`);
       }
 
-      if (index && !Number.isNaN(index)) {
-        that.select(+index);
+      if (index && !Number.isNaN(+index)) {
+        this.select(+index, {});
       }
     }
   }
@@ -1840,12 +1733,19 @@ class Suggestions {
   // Dropdown UI methods
 
   getSuggestionsItems() {
-    return this.$container.children(`.${this.classes.suggestion}`);
+    if (!this.container) return [];
+    return [...this.container.querySelectorAll(`.${this.classes.suggestion}`)] as HTMLElement[];
   }
 
   toggleDropdownEnabling(enable) {
     this.dropdownDisabled = !enable;
-    this.$container.attr("disabled", !enable);
+    if (this.container) {
+      if (enable) {
+        this.container.removeAttribute("disabled");
+      } else {
+        this.container.setAttribute("disabled", "true");
+      }
+    }
   }
 
   disableDropdown() {
@@ -1905,21 +1805,27 @@ class Suggestions {
       }
     }
 
-    that.$container.html(html.join(""));
+    that.container!.innerHTML = html.join("");
 
     // Select first value by default:
     if (options.autoSelectFirst && that.selectedIndex === -1) {
       that.selectedIndex = 0;
     }
     if (that.selectedIndex !== -1) {
-      that.getSuggestionsItems().eq(that.selectedIndex).addClass(that.classes.selected);
+      const items = that.getSuggestionsItems();
+      const selectedItem = items[that.selectedIndex];
+      if (selectedItem) {
+        selectedItem.classList.add(that.classes.selected);
+      }
     }
 
     if (typeof options.beforeRender === "function") {
-      options.beforeRender.call(that.element, that.$container);
+      options.beforeRender.call(that.element, that.container);
     }
 
-    that.$container.show();
+    if (that.container) {
+      that.container.style.display = "";
+    }
     that.visible = true;
   }
 
@@ -1960,26 +1866,31 @@ class Suggestions {
     const that = this;
     that.visible = false;
     that.selectedIndex = -1;
-    that.$container.hide().empty();
+    if (that.container) {
+      that.container.style.display = "none";
+      that.container.innerHTML = "";
+    }
   }
 
   activate(index) {
     const that = this;
-    let $activeItem;
     const selected = that.classes.selected;
-    let $children;
 
     if (!that.dropdownDisabled) {
-      $children = that.getSuggestionsItems();
+      const children = that.getSuggestionsItems();
 
-      $children.removeClass(selected);
+      for (const child of children) {
+        child.classList.remove(selected);
+      }
 
       that.selectedIndex = index;
 
-      if (that.selectedIndex !== -1 && $children.length > that.selectedIndex) {
-        $activeItem = $children.eq(that.selectedIndex);
-        $activeItem.addClass(selected);
-        return $activeItem;
+      if (that.selectedIndex !== -1 && children.length > that.selectedIndex) {
+        const activeItem = children[that.selectedIndex];
+        if (activeItem) {
+          activeItem.classList.add(selected);
+          return activeItem;
+        }
       }
     }
 
@@ -1991,9 +1902,11 @@ class Suggestions {
 
     if (!that.dropdownDisabled) {
       that.selectedIndex = -1;
-      that.getSuggestionsItems().removeClass(that.classes.selected);
+      for (const item of that.getSuggestionsItems()) {
+        item.classList.remove(that.classes.selected);
+      }
       if (restoreValue) {
-        that.el.val(that.currentValue);
+        that.element.value = that.currentValue;
       }
     }
   }
@@ -2035,27 +1948,26 @@ class Suggestions {
 
   adjustScroll(index) {
     const that = this;
-    const $activeItem = that.activate(index);
-    let itemBottom;
-    const scrollTop = that.$container[0].scrollTop;
-    let containerHeight;
+    const activeItem = that.activate(index);
 
-    if (!$activeItem || $activeItem.length === 0) {
+    if (!activeItem || !that.container) {
       return;
     }
 
-    const itemTop = $activeItem.position().top;
-    if (itemTop < 0) {
-      that.$container[0].scrollTop = scrollTop + itemTop;
+    const scrollTop = that.container.scrollTop;
+    const itemTop = activeItem.offsetTop - that.container.offsetTop;
+
+    if (itemTop < scrollTop) {
+      that.container.scrollTop = itemTop;
     } else {
-      itemBottom = itemTop + $activeItem.outerHeight();
-      containerHeight = that.$container.innerHeight();
-      if (itemBottom > containerHeight) {
-        that.$container[0].scrollTop = scrollTop - containerHeight + itemBottom;
+      const itemBottom = itemTop + activeItem.offsetHeight;
+      const containerHeight = that.container.clientHeight;
+      if (itemBottom > scrollTop + containerHeight) {
+        that.container.scrollTop = itemBottom - containerHeight;
       }
     }
 
-    that.el.val(that.suggestions[index].value);
+    that.element.value = that.suggestions[index].value;
   }
 
   createConstraints() {
@@ -2064,48 +1976,59 @@ class Suggestions {
 
   setupConstraints() {
     const that = this;
-    const constraints = that.options.constraints;
-    let $parent;
+    let constraints = that.options.constraints;
 
     if (!constraints) {
       that.unbindFromParent();
       return;
     }
 
-    if (constraints instanceof $ || typeof constraints === "string" || typeof constraints.nodeType === "number") {
-      $parent = $(constraints);
-      if (!$parent.is(that.constraints)) {
-        that.unbindFromParent();
-        if (!$parent.is(that.el)) {
-          that.constraints = $parent;
+    // Handle Cash/jQuery objects - extract the HTMLElement
+    if (constraints && typeof constraints === "object" && constraints[0] instanceof HTMLElement && typeof constraints.length === "number") {
+      constraints = constraints[0];
+    }
+
+    // Constraints can be: element, selector, or constraint object(s)
+    if (typeof constraints === "string" || constraints instanceof HTMLElement) {
+      // Constraint is an element or selector - find parent suggestions instance
+      const parentEl =
+        typeof constraints === "string" ? (document.querySelector(constraints) as HTMLInputElement) : (constraints as HTMLInputElement);
+      if (parentEl && parentEl !== that.element) {
+        const parentInstance = (parentEl as any)[DATA_ATTR_KEY] as Suggestions | undefined;
+        if (parentInstance) {
+          that.unbindFromParent();
+          that.constraints = parentEl;
           that.bindToParent();
         }
       }
     } else {
-      $.each(that.constraints, function (id) {
-        delete that.constraints[id];
-      });
-      for (const [, constraint] of (Array.isArray(constraints) ? constraints : [constraints]).entries()) {
+      // Constraint is an object or array of objects
+      for (const key of Object.keys(that.constraints)) {
+        delete that.constraints[key];
+      }
+      for (const constraint of Array.isArray(constraints) ? constraints : [constraints]) {
         that.addConstraint(constraint);
       }
     }
   }
 
   filteredLocation(data) {
-    const locationComponents = [];
+    const locationComponents = new Set();
     const location = {};
 
-    $.each(this.type.dataComponents, function () {
-      if (this.forLocations) locationComponents.push(this.id);
-    });
+    if (this.type.dataComponents) {
+      for (const component of this.type.dataComponents) {
+        if (component.forLocations) locationComponents.push(component.id);
+      }
+    }
 
     if (isPlainObject(data)) {
       // Copy to location only allowed fields
-      $.each(data, function (key, value) {
-        if (value && locationComponents.includes(key)) {
+      for (const [key, value] of Object.entries(data)) {
+        if (value && locationComponents.has(key)) {
           location[key] = value;
         }
-      });
+      }
     }
 
     if (Object.keys(location).length > 0) {
@@ -2131,12 +2054,16 @@ class Suggestions {
     let parentData;
     const params = {};
 
-    // eslint-disable-next-line no-cond-assign
-    while (constraints instanceof $ && (parentInstance = constraints.suggestions()) && !(parentData = parentInstance?.selection?.data)) {
+    // Walk up the parent chain to get constraint data
+    while (constraints instanceof HTMLElement) {
+      parentInstance = (constraints as any)[DATA_ATTR_KEY] as Suggestions | undefined;
+      if (!parentInstance) break;
+      parentData = parentInstance?.selection?.data;
+      if (parentData) break;
       constraints = parentInstance.constraints;
     }
 
-    if (constraints instanceof $) {
+    if (constraints instanceof HTMLElement && parentInstance) {
       parentData = new ConstraintLocation(parentData, parentInstance).getFields();
 
       if (parentData) {
@@ -2148,10 +2075,10 @@ class Suggestions {
         params.locations = [parentData];
         params.restrict_value = true;
       }
-    } else if (constraints) {
-      $.each(constraints, function (id, constraint) {
+    } else if (constraints && isPlainObject(constraints)) {
+      for (const constraint of Object.values(constraints) as Constraint[]) {
         locations = locations.concat(constraint.getFields());
-      });
+      }
 
       if (locations.length > 0) {
         params.locations = locations;
@@ -2174,31 +2101,30 @@ class Suggestions {
   }
 
   bindToParent() {
-    this.constraints
-      .on(
-        [
-          `suggestions-select.${this.uniqueId}`,
-          `suggestions-invalidateselection.${this.uniqueId}`,
-          `suggestions-clear.${this.uniqueId}`,
-        ].join(" "),
-        (e, suggestion, valueChanged) => {
-          // Don't clear if parent has been just enriched
-          if (e.type !== "suggestions-select" || valueChanged) {
-            this.clear();
-          }
-        },
-      )
-      .on(`suggestions-dispose.${this.uniqueId}`, () => {
-        this.onParentDispose();
-      });
+    const parentEl = this.constraints as HTMLElement;
+    if (!parentEl) return;
+
+    parentEl.addEventListener("suggestions-select", (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const valueChanged = detail?.[1];
+      // Don't clear if parent has been just enriched
+      if (valueChanged) {
+        this.clear();
+      }
+    });
+
+    parentEl.addEventListener("suggestions-invalidateselection", this.clear.bind(this));
+    parentEl.addEventListener("suggestions-clear", this.clear.bind(this));
+    parentEl.addEventListener("suggestions-dispose", this.onParentDispose.bind(this));
   }
 
   unbindFromParent() {
     const that = this;
-    const $parent = that.constraints;
+    const parentEl = that.constraints as HTMLElement;
 
-    if ($parent instanceof $) {
-      $parent.off(`.${that.uniqueId}`);
+    if (parentEl instanceof HTMLElement) {
+      // TODO:
+      // off(parentEl, `.${that.uniqueId}`);
     }
   }
 
@@ -2207,7 +2133,10 @@ class Suggestions {
   }
 
   getParentInstance() {
-    return this.constraints instanceof $ && this.constraints.suggestions();
+    if (this.constraints instanceof HTMLElement) {
+      return ((this.constraints as any)[DATA_ATTR_KEY] as Suggestions) || null;
+    }
+    return null;
   }
 
   shareWithParent(suggestion) {
@@ -2232,31 +2161,33 @@ class Suggestions {
     let maxSpecificity = -1;
 
     // Find most specific location that could restrict current data
-    $.each(that.constraints, function (id, constraint) {
-      $.each(constraint.locations, function (i, location) {
-        if (location.containsData(data) && location.specificity > maxSpecificity) {
-          maxSpecificity = location.specificity;
+    if (isPlainObject(that.constraints)) {
+      for (const constraint of Object.values(that.constraints) as Constraint[]) {
+        for (const location of constraint.locations) {
+          if (location.containsData(data) && location.specificity > maxSpecificity) {
+            maxSpecificity = location.specificity;
+          }
         }
-      });
-    });
+      }
+    }
 
     if (maxSpecificity >= 0) {
       // Для городов-регионов нужно также отсечь и город
       if (data.region_kladr_id && data.region_kladr_id === data.city_kladr_id) {
-        restrictedKeys.push.apply(restrictedKeys, that.type.dataComponentsById.city.fields);
+        restrictedKeys.push(...that.type.dataComponentsById.city.fields);
       }
 
       // Collect all fieldnames from all restricted components
-      $.each(that.type.dataComponents.slice(0, maxSpecificity + 1), function (i, component) {
-        restrictedKeys.push.apply(restrictedKeys, component.fields);
-      });
+      for (const component of that.type.dataComponents.slice(0, maxSpecificity + 1)) {
+        restrictedKeys.push(...component.fields);
+      }
 
       // Copy skipping restricted fields
-      $.each(data, function (key, value) {
+      for (const [key, value] of Object.entries(data)) {
         if (!restrictedKeys.includes(key)) {
           unrestrictedData[key] = value;
         }
-      });
+      }
     } else {
       unrestrictedData = data;
     }
@@ -2292,7 +2223,7 @@ function checkLocation(this: Suggestions) {
     return;
   }
 
-  that.geoLocation = $.Deferred();
+  that.geoLocation = new Deferred();
   if (isPlainObject(providedLocation) || Array.isArray(providedLocation)) {
     that.geoLocation.resolve(providedLocation);
     that.geoLocationValue = providedLocation;

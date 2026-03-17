@@ -1,8 +1,7 @@
 /* eslint-disable eqeqeq, unicorn/no-this-assignment, prefer-rest-params, no-use-before-define, unicorn/prefer-spread, prefer-const, no-var, unused-imports/no-unused-vars, unicorn/no-thenable */
-import $ from "cash-dom";
 
 // Deferred definition
-const Deferred = function () {
+export const Deferred = function () {
   // Private members - Starts
   const options = arguments[0] || {};
   let stateString = "pending";
@@ -178,5 +177,3 @@ const Deferred = function () {
   };
   // Public members - Ends
 };
-
-$.Deferred = () => new Deferred();

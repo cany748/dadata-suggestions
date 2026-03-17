@@ -28,7 +28,7 @@ const BANK_TYPE = {
 
     if (address) {
       address = address.replace(/^\d{6}( РОССИЯ)?, /i, "");
-      address = that.isMobile
+      address = globalThis.innerWidth <= this.options.mobileWidth
         ? address.replace(new RegExp(`^([^${WORD_DELIMITERS}]+[${WORD_DELIMITERS}]+[^${WORD_DELIMITERS}]+).*`), "$1")
         : highlightMatches(address, currentValue, {
             unformattableTokens: ADDRESS_STOPWORDS,

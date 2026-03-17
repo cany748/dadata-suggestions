@@ -73,10 +73,10 @@ describe("Base features", function () {
       this.input.value = "Jam";
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
-      expect(this.instance.$container.width()).toBeGreaterThan(0);
+      expect($(this.instance.container).width()).toBeGreaterThan(0);
     });
 
-    it("Should call beforeRender and pass container jQuery object", function () {
+    it("Should call beforeRender and pass container element", function () {
       const options = {
         beforeRender() {},
       };
@@ -88,7 +88,7 @@ describe("Base features", function () {
       this.server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
 
       expect(options.beforeRender.calls.count()).toEqual(1);
-      expect(options.beforeRender).toHaveBeenCalledWith(this.instance.$container);
+      expect(options.beforeRender).toHaveBeenCalledWith(this.instance.container);
     });
 
     it("Should prevent Ajax requests if previous query with matching root failed.", function () {
@@ -202,7 +202,7 @@ describe("Base features", function () {
 
       this.server.respond(helpers.responseFor(this.suggestions));
 
-      const $items = this.instance.$container.find(".suggestions-suggestion");
+      const $items = $(this.instance.container).find(".suggestions-suggestion");
 
       // Second option become first
       expect($items.eq(0)).toContainText(this.suggestions[1].value);
@@ -221,7 +221,7 @@ describe("Base features", function () {
 
       this.server.respond(helpers.responseFor(this.suggestions));
 
-      const $items = this.instance.$container.find(".suggestions-suggestion");
+      const $items = $(this.instance.container).find(".suggestions-suggestion");
 
       // Second option become first
       expect($items.eq(0)).toContainText(this.suggestions[1].value);
@@ -237,7 +237,7 @@ describe("Base features", function () {
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor(["Jamaica"]));
 
-      const $hint = this.instance.$container.find(".suggestions-hint");
+      const $hint = $(this.instance.container).find(".suggestions-hint");
 
       expect($hint.length).toEqual(1);
       expect($hint.text()).toEqual(DEFAULT_OPTIONS.hint);
@@ -253,7 +253,7 @@ describe("Base features", function () {
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor(["Jamaica"]));
 
-      const $hint = this.instance.$container.find(".suggestions-hint");
+      const $hint = $(this.instance.container).find(".suggestions-hint");
 
       expect($hint.length).toEqual(1);
       expect($hint.text()).toEqual(customHint);
@@ -268,7 +268,7 @@ describe("Base features", function () {
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor(["Jamaica"]));
 
-      const $hint = this.instance.$container.find(".suggestions-hint");
+      const $hint = $(this.instance.container).find(".suggestions-hint");
 
       expect($hint.length).toEqual(0);
     });
@@ -283,7 +283,7 @@ describe("Base features", function () {
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor(["Jamaica"]));
 
-      const $hint = this.instance.$container.find(".suggestions-hint");
+      const $hint = $(this.instance.container).find(".suggestions-hint");
 
       expect($hint.length).toEqual(0);
     });

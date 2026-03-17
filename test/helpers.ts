@@ -42,11 +42,11 @@ const helpers = {
     helpers.keydown(el, 13); // code of Enter
   },
   fireBlur(el: HTMLElement) {
-    const event = new FocusEvent("focusout", {
-      bubbles: true,
+    const event = new FocusEvent("blur", {
+      bubbles: false,
       cancelable: true,
     });
-    $(el).trigger(event as never);
+    el.dispatchEvent(event);
   },
   appendUnrestrictedValue(suggestion: any) {
     return $.extend({}, suggestion, {

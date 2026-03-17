@@ -1,4 +1,3 @@
-import "./poly";
 import "./main.css";
 
 import $ from "cash-dom";
