@@ -1,26 +1,25 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("FixData", function () {
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo("body");
-    this.instance = this.$input
-      .suggestions({
-        type: "ADDRESS",
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      type: "ADDRESS",
+    });
 
     helpers.returnGoodStatus(this.server);
   });
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
@@ -28,7 +27,7 @@ describe("FixData", function () {
     const value = "Санкт-Петербург, ул. Софийская, д.35, корп.4, кв.81";
     this.input.value = value;
 
-    this.$input.suggestions().fixData();
+    this.instance.fixData();
     this.server.respond(helpers.responseFor([]));
 
     expect(this.input.value).toEqual(value);

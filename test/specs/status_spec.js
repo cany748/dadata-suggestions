@@ -1,29 +1,28 @@
 import { fakeServer } from "nise";
+import { Suggestions } from "@/suggestions";
 
 describe("Status features", function () {
   const serviceUrl = "/some/url";
   const token = "1234";
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo("body");
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "NAME",
-        token,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "NAME",
+      token,
+    });
   });
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
   });
 
   it("Should send status request with token", function () {
@@ -70,19 +69,17 @@ describe("Status features", function () {
   describe("Several instances with the same token", function () {
     beforeEach(function () {
       this.input2 = document.createElement("input");
-      this.$input2 = $(this.input2).appendTo("body");
-      this.instance2 = this.$input2
-        .suggestions({
-          serviceUrl,
-          type: "NAME",
-          token,
-        })
-        .suggestions();
+      document.body.append(this.input2);
+      this.instance2 = new Suggestions(this.input2, {
+        serviceUrl,
+        type: "NAME",
+        token,
+      });
     });
 
     afterEach(function () {
       this.instance2.dispose();
-      this.$input2.remove();
+      this.input2.remove();
     });
 
     it("Should use the same authorization query", function () {

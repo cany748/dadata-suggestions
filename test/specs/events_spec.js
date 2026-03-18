@@ -1,29 +1,28 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Element events", function () {
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo("body");
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "NAME",
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "NAME",
+    });
 
     helpers.returnGoodStatus(this.server);
   });
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
@@ -80,9 +79,9 @@ describe("Element events", function () {
   });
 
   it("`suggestions-dispose` should be triggered", function () {
-    const $parent = $("<input>").appendTo($("body"));
-
-    $parent.suggestions({
+    const parentInput = document.createElement("input");
+    document.body.append(parentInput);
+    const parentInstance = new Suggestions(parentInput, {
       type: "ADDRESS",
       serviceUrl,
       geoLocation: false,
@@ -91,11 +90,11 @@ describe("Element events", function () {
     spyOn(this.instance, "onParentDispose");
 
     this.instance.setOptions({
-      constraints: $parent,
+      constraints: parentInput,
     });
 
-    $parent.suggestions().dispose();
-    $parent.remove();
+    parentInstance.dispose();
+    parentInput.remove();
 
     expect(this.instance.onParentDispose).toHaveBeenCalled();
   });

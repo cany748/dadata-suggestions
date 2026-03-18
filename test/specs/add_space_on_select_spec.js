@@ -1,24 +1,22 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Adding space on selecting", function () {
   const serviceUrl = "/some/url";
-  const $body = $(document.body);
 
   describe("For NAME controls", function () {
     beforeEach(function () {
-      $.Suggestions.resetTokens();
+      Suggestions.resetTokens();
 
       this.server = fakeServer.create();
 
       this.input = document.createElement("input");
-      this.$input = $(this.input).appendTo($body);
-      this.instance = this.$input
-        .suggestions({
-          serviceUrl,
-          type: "NAME",
-        })
-        .suggestions();
+      document.body.append(this.input);
+      this.instance = new Suggestions(this.input, {
+        serviceUrl,
+        type: "NAME",
+      });
 
       helpers.returnPoorStatus(this.server);
     });
@@ -26,7 +24,7 @@ describe("Adding space on selecting", function () {
     afterEach(function () {
       this.server.restore();
       this.instance.dispose();
-      this.$input.remove();
+      this.input.remove();
     });
 
     it("Should add SPACE at the end if only NAME specified", function () {
@@ -182,20 +180,18 @@ describe("Adding space on selecting", function () {
 
   describe("For ADDRESS controls", function () {
     beforeEach(function () {
-      $.Suggestions.resetTokens();
+      Suggestions.resetTokens();
 
       this.server = fakeServer.create();
 
       this.input = document.createElement("input");
-      this.$input = $(this.input).appendTo($body);
-      this.instance = this.$input
-        .suggestions({
-          serviceUrl,
-          type: "ADDRESS",
-          geoLocation: false,
-          enrichmentEnabled: false,
-        })
-        .suggestions();
+      document.body.append(this.input);
+      this.instance = new Suggestions(this.input, {
+        serviceUrl,
+        type: "ADDRESS",
+        geoLocation: false,
+        enrichmentEnabled: false,
+      });
 
       helpers.returnPoorStatus(this.server);
     });
@@ -203,7 +199,7 @@ describe("Adding space on selecting", function () {
     afterEach(function () {
       this.instance.dispose();
       this.server.restore();
-      this.$input.remove();
+      this.input.remove();
     });
 
     it("Should add SPACE at the end if only COUNTRY specified", function () {

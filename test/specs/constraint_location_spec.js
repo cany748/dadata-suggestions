@@ -1,27 +1,27 @@
 import { fakeServer } from "nise";
+import { Suggestions } from "@/suggestions";
 
 describe("Constraint Location", function () {
   beforeEach(function () {
     this.server = fakeServer.create();
 
-    this.$input = $(document.createElement("input")).appendTo(document.body);
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl: "service/url",
-        type: "ADDRESS",
-        geoLocation: false,
-      })
-      .suggestions();
+    this.input = document.createElement("input");
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl: "service/url",
+      type: "ADDRESS",
+      geoLocation: false,
+    });
   });
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
   it("should skip unnecessary fields", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         country: "Россия",
         region: "Самарская",
@@ -40,7 +40,7 @@ describe("Constraint Location", function () {
   });
 
   it("should use kladr id if specified", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         city: "Тольятти",
         kladr_id: "6300000700000",
@@ -53,7 +53,7 @@ describe("Constraint Location", function () {
 
   // наличие фиас параметров если переданы
   it("should use fias id if specified", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         city: "Тольятти",
         kladr_id: "6300000700000",
@@ -67,7 +67,7 @@ describe("Constraint Location", function () {
   });
 
   it("should determine specificity", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         city: "Тольятти",
       },
@@ -80,7 +80,7 @@ describe("Constraint Location", function () {
   });
 
   it("should determine specificity of kladr_id #1", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         kladr_id: "6300000700000",
       },
@@ -94,7 +94,7 @@ describe("Constraint Location", function () {
   });
 
   it("should determine specificity of kladr_id #2", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         kladr_id: "5000004000000",
       },
@@ -108,7 +108,7 @@ describe("Constraint Location", function () {
   });
 
   it("should determine specificity of kladr_id #3", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         kladr_id: "50000040000016000",
       },
@@ -122,7 +122,7 @@ describe("Constraint Location", function () {
   });
 
   it("should determine suggestion data includes", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         country: "россия",
         region: "самарская",
@@ -177,7 +177,7 @@ describe("Constraint Location", function () {
   });
 
   it("should determine suggestion data includes by kladr_id", function () {
-    const location = new $.Suggestions.ConstraintLocation(
+    const location = new Suggestions.ConstraintLocation(
       {
         kladr_id: "6300000700000",
       },

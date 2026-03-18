@@ -1,21 +1,20 @@
 import { fakeServer } from "nise";
+import { Suggestions } from "@/suggestions";
 
 describe("Geolocation", function () {
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
-    $.Suggestions.resetLocation();
-    $.Suggestions.resetTokens();
+    Suggestions.resetLocation();
+    Suggestions.resetTokens();
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo("body");
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "ADDRESS",
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "ADDRESS",
+    });
 
     // First request gets service status info
     this.server.requests.shift().respond(
@@ -33,10 +32,10 @@ describe("Geolocation", function () {
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
-    $.Suggestions.resetTokens();
-    $.Suggestions.resetLocation();
+    Suggestions.resetTokens();
+    Suggestions.resetLocation();
   });
 
   it("Should send geolocation request if no `geoLocation` option specified", function () {
@@ -45,7 +44,7 @@ describe("Geolocation", function () {
   });
 
   it("Should send geolocation request for party", function () {
-    $.Suggestions.resetLocation();
+    Suggestions.resetLocation();
     this.server.requests.length = 0;
     this.server.respond("GET", /status\/party/, [
       200,
@@ -57,7 +56,7 @@ describe("Geolocation", function () {
         state: "ENABLED",
       }),
     ]);
-    this.$input.suggestions({
+    this.instance = new Suggestions(this.input, {
       serviceUrl,
       type: "PARTY",
     });
@@ -65,7 +64,7 @@ describe("Geolocation", function () {
   });
 
   it("Should send geolocation request for bank", function () {
-    $.Suggestions.resetLocation();
+    Suggestions.resetLocation();
     this.server.requests.length = 0;
     this.server.respond("GET", /status\/bank/, [
       200,
@@ -77,7 +76,7 @@ describe("Geolocation", function () {
         state: "ENABLED",
       }),
     ]);
-    this.$input.suggestions({
+    this.instance = new Suggestions(this.input, {
       serviceUrl,
       type: "BANK",
     });
@@ -108,7 +107,7 @@ describe("Geolocation", function () {
   it("Should not send geolocation request if `geoLocation` set to false", function () {
     this.server.requests.length = 0;
 
-    this.$input.suggestions({
+    this.instance = new Suggestions(this.input, {
       serviceUrl,
       type: "ADDRESS",
       geoLocation: false,
@@ -120,7 +119,7 @@ describe("Geolocation", function () {
   it("Should not send geolocation request if `geoLocation` set as object", function () {
     this.server.requests.length = 0;
 
-    this.$input.suggestions({
+    this.instance = new Suggestions(this.input, {
       serviceUrl,
       type: "ADDRESS",
       geoLocation: {
@@ -132,7 +131,7 @@ describe("Geolocation", function () {
   });
 
   it("Should send location set by `geoLocation` option as object", function () {
-    this.$input.suggestions({
+    this.instance = new Suggestions(this.input, {
       serviceUrl,
       type: "ADDRESS",
       geoLocation: {
@@ -140,21 +139,21 @@ describe("Geolocation", function () {
       },
     });
 
-    this.$input.val("A");
-    this.$input.suggestions("onValueChange");
+    this.input.value = "A";
+    this.instance.onValueChange();
 
     expect(this.server.requests[1].requestBody).toContain('"locations_boost":[{"kladr_id":"83"}]');
   });
 
   it("Should send location set by `geoLocation` option as array", function () {
-    this.$input.suggestions({
+    this.instance = new Suggestions(this.input, {
       serviceUrl,
       type: "ADDRESS",
       geoLocation: [{ kladr_id: "77" }, { kladr_id: "50" }],
     });
 
-    this.$input.val("A");
-    this.$input.suggestions("onValueChange");
+    this.input.value = "A";
+    this.instance.onValueChange();
 
     expect(this.server.requests[1].requestBody).toContain('"locations_boost":[{"kladr_id":"77"},{"kladr_id":"50"}]');
   });

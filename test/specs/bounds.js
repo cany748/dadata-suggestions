@@ -1,26 +1,24 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Bounds", function () {
   const serviceUrl = "/some/url";
-  const $body = $(document.body);
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo($body);
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "ADDRESS",
-        geoLocation: false,
-        // disable mobile view features
-        mobileWidth: Number.NaN,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "ADDRESS",
+      geoLocation: false,
+      // disable mobile view features
+      mobileWidth: Number.NaN,
+    });
 
     helpers.returnGoodStatus(this.server);
     this.server.requests.length = 0;
@@ -28,7 +26,7 @@ describe("Bounds", function () {
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
@@ -129,7 +127,7 @@ describe("Bounds", function () {
       },
     });
 
-    expect(this.$input.val()).toEqual("г Узловая, поселок Брусянский");
+    expect(this.input.value).toEqual("г Узловая, поселок Брусянский");
     expect(this.instance.selection.data.street).toBeUndefined();
     expect(this.instance.selection.data.kladr_id).toEqual("7102200100200");
   });

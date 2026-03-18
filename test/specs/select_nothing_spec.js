@@ -1,5 +1,6 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Nothing selected callback", function () {
   const serviceUrl = "/some/url";
@@ -10,20 +11,18 @@ describe("Nothing selected callback", function () {
   ];
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo("body");
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "ADDRESS",
-        onSelect: () => {},
-        geoLocation: false,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "ADDRESS",
+      onSelect: () => {},
+      geoLocation: false,
+    });
 
     helpers.returnGoodStatus(this.server);
 
@@ -33,7 +32,7 @@ describe("Nothing selected callback", function () {
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 

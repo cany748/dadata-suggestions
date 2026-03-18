@@ -1,5 +1,6 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Text to insert after selection", function () {
   const serviceUrl = "/some/url";
@@ -8,15 +9,13 @@ describe("Text to insert after selection", function () {
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo("body");
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "NAME",
-        // disable mobile view features
-        mobileWidth: Number.NaN,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "NAME",
+      // disable mobile view features
+      mobileWidth: Number.NaN,
+    });
 
     helpers.returnGoodStatus(this.server);
     this.server.requests.length = 0;
@@ -24,7 +23,7 @@ describe("Text to insert after selection", function () {
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
@@ -554,9 +553,10 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    const $parent = $("<input>").appendTo($(document.body));
+    const parentInput = document.createElement("input");
+    document.body.append(parentInput);
 
-    $parent.suggestions({
+    const parentInstance = new Suggestions(parentInput, {
       serviceUrl,
       type: "ADDRESS",
       geoLocation: false,
@@ -568,14 +568,14 @@ describe("Text to insert after selection", function () {
       type: "ADDRESS",
       geoLocation: false,
       bounds: "street",
-      constraints: $parent,
+      constraints: parentInput,
     });
 
     // Setting type will request for status
     helpers.returnGoodStatus(this.server);
     this.server.requests.length = 0;
 
-    $parent.val("Ново");
+    parentInput.value = "Ново";
     this.input.value = "Вави";
     this.instance.onValueChange();
 
@@ -586,9 +586,10 @@ describe("Text to insert after selection", function () {
     this.instance.select(0);
     this.server.respond(helpers.responseFor(suggestions));
 
-    expect($parent.val()).toEqual("г Новосибирск");
+    expect(parentInput.value).toEqual("г Новосибирск");
 
-    $parent.remove();
+    parentInstance.dispose();
+    parentInput.remove();
   });
 
   it("Should not include city district in bounded city-settlement parent (district from FIAS)", function () {
@@ -636,9 +637,10 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    const $parent = $("<input>").appendTo($(document.body));
+    const parentInput = document.createElement("input");
+    document.body.append(parentInput);
 
-    $parent.suggestions({
+    const parentInstance = new Suggestions(parentInput, {
       serviceUrl,
       type: "ADDRESS",
       geoLocation: false,
@@ -650,14 +652,14 @@ describe("Text to insert after selection", function () {
       type: "ADDRESS",
       geoLocation: false,
       bounds: "street",
-      constraints: $parent,
+      constraints: parentInput,
     });
 
     // Setting type will request for status
     helpers.returnGoodStatus(this.server);
     this.server.requests.length = 0;
 
-    $parent.val("Сочи");
+    parentInput.value = "Сочи";
     this.input.value = "Авиа";
     this.instance.onValueChange();
 
@@ -668,9 +670,10 @@ describe("Text to insert after selection", function () {
     this.instance.select(0);
     this.server.respond(helpers.responseFor(suggestions));
 
-    expect($parent.val()).toEqual("г Сочи");
+    expect(parentInput.value).toEqual("г Сочи");
 
-    $parent.remove();
+    parentInstance.dispose();
+    parentInput.remove();
   });
 
   it("Should include city district in constrained value for streets with same names", function () {

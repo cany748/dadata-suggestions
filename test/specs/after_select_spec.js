@@ -1,23 +1,22 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("After selecting", function () {
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo($("body"));
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "NAME",
-        enrichmentEnabled: false,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "NAME",
+      enrichmentEnabled: false,
+    });
 
     helpers.returnPoorStatus(this.server);
   });
@@ -25,7 +24,7 @@ describe("After selecting", function () {
   afterEach(function () {
     this.server.restore();
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
   });
 
   it("Should hide dropdown if received suggestions contains only one suggestion equal to current", function () {
@@ -184,8 +183,8 @@ describe("After selecting", function () {
     this.instance.onValueChange();
     this.server.respond(helpers.responseFor(suggestions));
 
-    const $hint = $(this.instance.container).find(".suggestions-hint");
-    expect($hint.length).toEqual(1);
+    const hints = this.instance.container.querySelectorAll(".suggestions-hint");
+    expect(hints.length).toEqual(1);
     expect(this.instance.hide).not.toHaveBeenCalled();
   });
 });

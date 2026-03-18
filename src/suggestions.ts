@@ -507,6 +507,7 @@ class Suggestions {
     this.element.classList.add("suggestions-input");
     this.element.style.boxSizing = "border-box";
 
+    (this.element as any)[DATA_ATTR_KEY] = this;
     this.uniqueId = generateId("i");
     this.createWrapper();
     this.notify("initialize");

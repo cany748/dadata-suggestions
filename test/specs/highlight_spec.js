@@ -1,5 +1,6 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Highlight suggestions", function () {
   const serviceUrl = "/some/url";
@@ -8,20 +9,18 @@ describe("Highlight suggestions", function () {
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo("body");
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "NAME",
-        // disable mobile view
-        mobileWidth: Number.NaN,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "NAME",
+      // disable mobile view
+      mobileWidth: Number.NaN,
+    });
   });
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
@@ -31,10 +30,10 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Japaneese lives in Japan and love nonjapaneese"]));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toEqual(
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toEqual(
       helpers.wrapFormattedValue("<strong>Japa</strong>neese lives in <strong>Japa</strong>n and love nonjapaneese"),
     );
   });
@@ -45,10 +44,10 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Japaneese and non-japaneese"]));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toEqual(helpers.wrapFormattedValue("<strong>Japa</strong>neese and non-<strong>japa</strong>neese"));
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toEqual(helpers.wrapFormattedValue("<strong>Japa</strong>neese and non-<strong>japa</strong>neese"));
   });
 
   it("Should highlight search phrase with delimiter in the middle", function () {
@@ -57,10 +56,10 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["г Санкт-Петербург"]));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toEqual(helpers.wrapFormattedValue("г <strong>Санкт-Петер</strong>бург"));
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toEqual(helpers.wrapFormattedValue("г <strong>Санкт-Петер</strong>бург"));
   });
 
   it("Should highlight search phrase with delimiter in the middle, example 2", function () {
@@ -69,10 +68,10 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Ростовская обл, г Ростов-на-Дону"]));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toContain("Ростов-<strong>на-Дон</strong>у");
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toContain("Ростов-<strong>на-Дон</strong>у");
   });
 
   it("Should highlight words of search phrase within complex word", function () {
@@ -81,10 +80,10 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Ростовская обл, г Ростов-на-Дону"]));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toContain("<strong>Ростов-на</strong>-<strong>Дон</strong>у");
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toContain("<strong>Ростов-на</strong>-<strong>Дон</strong>у");
   });
 
   it("Should highlight words of search phrase within complex word, example 2", function () {
@@ -94,10 +93,10 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["ОАО АЛЬФА-БАНК"]));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toContain("ОАО <strong>АЛЬФА</strong>-<strong>БАНК</strong>");
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toContain("ОАО <strong>АЛЬФА</strong>-<strong>БАНК</strong>");
   });
 
   it("Should not use object type for highlight if there are matching name", function () {
@@ -110,15 +109,15 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Приморский край, Партизанский р-н, поселок Николаевка"]));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
+    expect(items.length).toEqual(1);
 
     // Слово "р-н" разбивается на два слова "р" и "н", и поскольку "н" находится раньше, чем "нико",
     // оно было бы выбрано для подсветки "Николаевка": <strong>Н</strong>иколаевка
     // Но т.к. "р-н" это наименование типа объекта, оно (и его части) будет подставляться в последнюю очередь.
     // и для подсветки "Николаевка" в итоге будет выбрано более "нико"
-    expect($item.html()).toContain("<strong>Нико</strong>лаевка");
+    expect(items[0].innerHTML).toContain("<strong>Нико</strong>лаевка");
   });
 
   it("Should highlight search phrase in quotes", function () {
@@ -130,10 +129,10 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(['ООО "Фирма"']));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toEqual(helpers.wrapFormattedValue('ООО "<strong>Фирма</strong>"'));
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toEqual(helpers.wrapFormattedValue('ООО "<strong>Фирма</strong>"'));
   });
 
   it("Should highlight names regardless of parts order", function () {
@@ -147,10 +146,12 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(["Петров Петр Иванович"]));
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toEqual(helpers.wrapFormattedValue("<strong>Петр</strong>ов <strong>Петр</strong> <strong>Иванович</strong>"));
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toEqual(
+      helpers.wrapFormattedValue("<strong>Петр</strong>ов <strong>Петр</strong> <strong>Иванович</strong>"),
+    );
   });
 
   it("Should highlight address in parties, ignoring address components types", function () {
@@ -174,10 +175,10 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
-    const html = $item.html();
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
+    const html = items[0].innerHTML;
 
-    expect($item.length).toEqual(1);
+    expect(items.length).toEqual(1);
     expect(html).toContain("<strong>Кра</strong>снодарский");
     expect(html).toContain("г <strong>Кра</strong>снодар");
 
@@ -208,11 +209,11 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
-    const html = $item.html();
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
+    const html = items[0].innerHTML;
     const pattern = "<strong>54 03 23308 5</strong>".replace(/ /g, '<span class="suggestions-subtext-delimiter"></span>');
 
-    expect($item.length).toEqual(1);
+    expect(items.length).toEqual(1);
     expect(html).toContain(`<span class="suggestions-subtext suggestions-subtext_inline">${pattern}</span>`);
   });
 
@@ -239,11 +240,11 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
-    const html = $item.html();
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
+    const html = items[0].innerHTML;
     const pattern = "<strong>54 03 23</strong>308 5".replace(/ /g, '<span class="suggestions-subtext-delimiter"></span>');
 
-    expect($item.length).toEqual(1);
+    expect(items.length).toEqual(1);
     expect(html).toContain(`<span class="suggestions-subtext suggestions-subtext_inline">${pattern}</span>`);
   });
 
@@ -263,10 +264,10 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toContain("<strong>ЗАО</strong> <strong>&amp;LT</strong> &lt;b&gt;bold&lt;/b&gt;");
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toContain("<strong>ЗАО</strong> <strong>&amp;LT</strong> &lt;b&gt;bold&lt;/b&gt;");
   });
 
   it("Should drop the end of text if `maxLength` option specified", function () {
@@ -288,10 +289,12 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect($item.html()).toEqual(helpers.wrapFormattedValue("Филиал <strong>КАЛМЫЦ</strong>КИЙ ФИЛИАЛ АККРЕДИТОВАННОГО ОБРАЗОВАТ..."));
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toEqual(
+      helpers.wrapFormattedValue("Филиал <strong>КАЛМЫЦ</strong>КИЙ ФИЛИАЛ АККРЕДИТОВАННОГО ОБРАЗОВАТ..."),
+    );
   });
 
   it("Should show labels for same-looking suggestions", function () {
@@ -323,11 +326,11 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $items = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($items.length).toEqual(2);
-    expect($items.eq(0).html()).toContain('<span class="suggestions-subtext suggestions-subtext_label">имя, отчество</span>');
-    expect($items.eq(1).html()).toContain('<span class="suggestions-subtext suggestions-subtext_label">имя, фамилия</span>');
+    expect(items.length).toEqual(2);
+    expect(items[0].innerHTML).toContain('<span class="suggestions-subtext suggestions-subtext_label">имя, отчество</span>');
+    expect(items[1].innerHTML).toContain('<span class="suggestions-subtext suggestions-subtext_label">имя, фамилия</span>');
   });
 
   it("Should show OGRN instead of INN if match", function () {
@@ -354,11 +357,12 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
-    const html = $item.html();
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect(html).toContain('<span class="suggestions-subtext suggestions-subtext_inline"><strong>1095403</strong>010900</span>');
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toContain(
+      '<span class="suggestions-subtext suggestions-subtext_inline"><strong>1095403</strong>010900</span>',
+    );
   });
 
   it("Should show latin name instead of regular name if match", function () {
@@ -383,11 +387,10 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
-    const html = $item.html();
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect(html).toContain('JSC "<strong>ALFA</strong>-TECHNICA"');
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toContain('JSC "<strong>ALFA</strong>-TECHNICA"');
   });
 
   it("Should show director's name instead of address if match", function () {
@@ -413,11 +416,10 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
-    const html = $item.html();
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect(html).toContain("</span><strong>Жура</strong>влев Дмитрий Сергеевич</div>");
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toContain("</span><strong>Жура</strong>влев Дмитрий Сергеевич</div>");
   });
 
   it("Should show attribute with status", function () {
@@ -441,11 +443,10 @@ describe("Highlight suggestions", function () {
       ]),
     );
 
-    const $item = $(this.instance.container).children(".suggestions-suggestion");
-    const html = $item.html();
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($item.length).toEqual(1);
-    expect(html).toContain(' data-suggestion-status="LIQUIDATED"');
+    expect(items.length).toEqual(1);
+    expect(items[0].innerHTML).toContain(' data-suggestion-status="LIQUIDATED"');
   });
 
   it("should show history values", function () {
@@ -472,8 +473,12 @@ describe("Highlight suggestions", function () {
 
     this.server.respond(helpers.responseFor(suggestions));
 
-    const $items = $(this.instance.container).children(".suggestions-suggestion");
+    const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
-    expect($items.eq(0).html()).toContain("(бывш. ул <strong>Эсперан</strong>то)");
+    expect(items.length).toEqual(2);
+    expect(items[0].innerHTML).toContain("(бывш. ул <strong>Эсперан</strong>то)");
+    expect(items[1].innerHTML).toContain(
+      '<span class="suggestions-value"><span class="suggestions-nowrap">г <strong>Казань</strong></span>, <span class="suggestions-nowrap">тер ГСК <strong>Эсперан</strong>товский (<strong>Эсперан</strong>то)</span></span>',
+    );
   });
 });

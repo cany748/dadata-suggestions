@@ -1,9 +1,4 @@
 import { expect, vi } from "vitest";
-import $ from "cash-dom";
-import "../src/main";
-
-// Глобальные переменные для браузера
-window.$ = $;
 
 // Jasmine совместимость - spyOn
 window.spyOn = function (obj, method) {
@@ -120,8 +115,7 @@ window.it = function (name, fn) {
 
 expect.extend({
   toContainText(received, expected) {
-    const element = received instanceof $ ? received : $(received);
-    const text = element.text();
+    const text = received.textContent;
     const pass = text.includes(expected);
 
     return {

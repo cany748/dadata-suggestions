@@ -1,28 +1,25 @@
 import { fakeServer } from "nise";
 
 import helpers from "../helpers";
-import { DEFAULT_OPTIONS } from "@/suggestions";
+import { DEFAULT_OPTIONS, Suggestions } from "@/suggestions";
 import { DATA_ATTR_KEY } from "@/constants";
 
 describe("Base features", function () {
   const serviceUrl = "/some/url";
-  const $body = $(document.body);
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo($body);
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "NAME",
-        // disable mobile view features
-        mobileWidth: Number.NaN,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "NAME",
+      // disable mobile view features
+      mobileWidth: Number.NaN,
+    });
 
     helpers.returnGoodStatus(this.server);
     this.server.requests.length = 0;
@@ -30,7 +27,7 @@ describe("Base features", function () {
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
@@ -55,25 +52,25 @@ describe("Base features", function () {
     });
 
     it("Should destroy suggestions instance", function () {
-      const $div = $(document.createElement("div"));
+      const div = document.createElement("div");
 
-      $div.append(this.input);
+      div.append(this.input);
 
-      expect(this.$input[0][DATA_ATTR_KEY]).toBeDefined();
+      expect(this.input[DATA_ATTR_KEY]).toBeDefined();
 
-      this.$input.suggestions("dispose");
+      this.instance.dispose();
 
-      expect(this.$input[0][DATA_ATTR_KEY]).toBeUndefined();
-      $.each([".suggestions-suggestions", ".suggestions-addon", ".suggestions-constraints"], function (i, selector) {
-        expect($div.find(selector).length).toEqual(0);
-      });
+      expect(this.input[DATA_ATTR_KEY]).toBeUndefined();
+      for (const selector of [".suggestions-suggestions", ".suggestions-addon", ".suggestions-constraints"]) {
+        expect(div.querySelectorAll(selector).length).toEqual(0);
+      }
     });
 
     it("Should set width to be greater than zero", function () {
       this.input.value = "Jam";
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
-      expect($(this.instance.container).width()).toBeGreaterThan(0);
+      expect(this.instance.container.offsetWidth).toBeGreaterThan(0);
     });
 
     it("Should call beforeRender and pass container element", function () {
@@ -202,13 +199,13 @@ describe("Base features", function () {
 
       this.server.respond(helpers.responseFor(this.suggestions));
 
-      const $items = $(this.instance.container).find(".suggestions-suggestion");
+      const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
       // Second option become first
-      expect($items.eq(0)).toContainText(this.suggestions[1].value);
-      expect($items.eq(1)).toContainText(this.suggestions[2].value);
+      expect(items[0]).toContainText(this.suggestions[1].value);
+      expect(items[1]).toContainText(this.suggestions[2].value);
       // First option become last
-      expect($items.eq(2)).toContainText(this.suggestions[0].value);
+      expect(items[2]).toContainText(this.suggestions[0].value);
     });
 
     it("can use returned array", function () {
@@ -221,13 +218,13 @@ describe("Base features", function () {
 
       this.server.respond(helpers.responseFor(this.suggestions));
 
-      const $items = $(this.instance.container).find(".suggestions-suggestion");
+      const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
 
       // Second option become first
-      expect($items.eq(0)).toContainText(this.suggestions[1].value);
-      expect($items.eq(1)).toContainText(this.suggestions[2].value);
+      expect(items[0]).toContainText(this.suggestions[1].value);
+      expect(items[1]).toContainText(this.suggestions[2].value);
       // First option become last
-      expect($items.eq(2)).toContainText(this.suggestions[0].value);
+      expect(items[2]).toContainText(this.suggestions[0].value);
     });
   });
 
@@ -237,10 +234,10 @@ describe("Base features", function () {
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor(["Jamaica"]));
 
-      const $hint = $(this.instance.container).find(".suggestions-hint");
+      const hints = this.instance.container.querySelectorAll(".suggestions-hint");
 
-      expect($hint.length).toEqual(1);
-      expect($hint.text()).toEqual(DEFAULT_OPTIONS.hint);
+      expect(hints.length).toEqual(1);
+      expect(hints[0].textContent).toEqual(DEFAULT_OPTIONS.hint);
     });
 
     it("Should display custom hint message above suggestions", function () {
@@ -253,10 +250,10 @@ describe("Base features", function () {
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor(["Jamaica"]));
 
-      const $hint = $(this.instance.container).find(".suggestions-hint");
+      const hints = this.instance.container.querySelectorAll(".suggestions-hint");
 
-      expect($hint.length).toEqual(1);
-      expect($hint.text()).toEqual(customHint);
+      expect(hints.length).toEqual(1);
+      expect(hints[0].textContent).toEqual(customHint);
     });
 
     it("Should not display any hint message above suggestions", function () {
@@ -268,9 +265,9 @@ describe("Base features", function () {
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor(["Jamaica"]));
 
-      const $hint = $(this.instance.container).find(".suggestions-hint");
+      const hints = this.instance.container.querySelectorAll(".suggestions-hint");
 
-      expect($hint.length).toEqual(0);
+      expect(hints.length).toEqual(0);
     });
 
     it("Should not display any hint message for narrow-screen (mobile) view", function () {
@@ -283,9 +280,9 @@ describe("Base features", function () {
       this.instance.onValueChange();
       this.server.respond(helpers.responseFor(["Jamaica"]));
 
-      const $hint = $(this.instance.container).find(".suggestions-hint");
+      const hints = this.instance.container.querySelectorAll(".suggestions-hint");
 
-      expect($hint.length).toEqual(0);
+      expect(hints.length).toEqual(0);
     });
   });
 

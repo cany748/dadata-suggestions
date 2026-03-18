@@ -1,5 +1,6 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Select on Enter", function () {
   const serviceUrl = "/some/url";
@@ -246,7 +247,7 @@ describe("Select on Enter", function () {
   };
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
     this.server.respondWith("POST", /suggest/, function (xhr) {
@@ -257,16 +258,14 @@ describe("Select on Enter", function () {
     helpers.returnPoorStatus(this.server);
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo("body");
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "ADDRESS",
-        onSelect: () => {},
-        geoLocation: false,
-        enrichmentEnabled: false,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "ADDRESS",
+      onSelect: () => {},
+      geoLocation: false,
+      enrichmentEnabled: false,
+    });
 
     this.server.respond();
     this.server.requests.length = 0;
@@ -274,7 +273,7 @@ describe("Select on Enter", function () {
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 

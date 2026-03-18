@@ -1,32 +1,30 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Select on Space", function () {
   const serviceUrl = "/some/url";
-  const $body = $(document.body);
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo($body);
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "NAME",
-        deferRequestBy: 0,
-        triggerSelectOnSpace: true,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "NAME",
+      deferRequestBy: 0,
+      triggerSelectOnSpace: true,
+    });
 
     helpers.returnGoodStatus(this.server);
   });
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 

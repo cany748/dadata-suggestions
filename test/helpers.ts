@@ -1,5 +1,3 @@
-import $ from "cash-dom";
-
 const helpers = {
   isHidden(el: HTMLElement) {
     return el.offsetParent === null;
@@ -11,7 +9,7 @@ const helpers = {
       bubbles: true,
       cancelable: true,
     });
-    $(el).trigger(event as never);
+    el.dispatchEvent(event);
   },
   keyup(el: HTMLElement, keyCode: number) {
     const event = new KeyboardEvent("keyup", {
@@ -20,14 +18,14 @@ const helpers = {
       bubbles: true,
       cancelable: true,
     });
-    $(el).trigger(event as never);
+    el.dispatchEvent(event);
   },
   click(el: HTMLElement) {
     const event = new MouseEvent("click", {
       bubbles: true,
       cancelable: true,
     });
-    $(el).trigger(event as never);
+    el.dispatchEvent(event);
   },
   responseFor(suggestions: any) {
     return [
@@ -49,9 +47,7 @@ const helpers = {
     el.dispatchEvent(event);
   },
   appendUnrestrictedValue(suggestion: any) {
-    return $.extend({}, suggestion, {
-      unrestricted_value: suggestion.value,
-    });
+    return { ...suggestion, unrestricted_value: suggestion.value };
   },
   wrapFormattedValue(value: any, status: any) {
     return `<span class="suggestions-value"${status ? ` data-suggestion-status="${status}"` : ""}>${value}</span>`;

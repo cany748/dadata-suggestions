@@ -21,7 +21,6 @@ export const CLASSES = {
   value: "suggestions-value",
 };
 
-export const EVENT_NS = ".suggestions";
 export const DATA_ATTR_KEY = "suggestions";
 export const WORD_DELIMITERS = String.raw`\s"'~\*\.,:\|\[\]\(\)\{\}<>№`;
 export const WORD_PARTS_DELIMITERS = String.raw`\-\+\\\?!@#$%^&`;

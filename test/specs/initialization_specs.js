@@ -1,10 +1,9 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
-import { DEFAULT_OPTIONS } from "@/suggestions";
+import { DEFAULT_OPTIONS, Suggestions } from "@/suggestions";
 
 describe.only("Initialization", function () {
   const serviceUrl = "/some/url";
-  const $body = $(document.body);
 
   /**
    * Just a wrapper for a bunch of specs to check that instance is completely initialized
@@ -24,7 +23,7 @@ describe.only("Initialization", function () {
   }
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
   });
@@ -36,20 +35,18 @@ describe.only("Initialization", function () {
   describe("visible element", function () {
     beforeEach(function () {
       this.input = document.createElement("input");
-      this.$input = $(this.input).appendTo($body);
-      this.instance = this.$input
-        .suggestions({
-          serviceUrl,
-          type: "NAME",
-        })
-        .suggestions();
+      document.body.append(this.input);
+      this.instance = new Suggestions(this.input, {
+        serviceUrl,
+        type: "NAME",
+      });
 
       helpers.returnGoodStatus(this.server);
     });
 
     afterEach(function () {
       this.instance.dispose();
-      this.$input.remove();
+      this.input.remove();
     });
 
     it("Should initialize suggestions options", function () {
@@ -62,19 +59,17 @@ describe.only("Initialization", function () {
   describe("check defaults", function () {
     beforeEach(function () {
       this.input = document.createElement("input");
-      this.$input = $(this.input).appendTo($body);
-      this.instance = this.$input
-        .suggestions({
-          type: "NAME",
-        })
-        .suggestions();
+      document.body.append(this.input);
+      this.instance = new Suggestions(this.input, {
+        type: "NAME",
+      });
 
       helpers.returnGoodStatus(this.server);
     });
 
     afterEach(function () {
       this.instance.dispose();
-      this.$input.remove();
+      this.input.remove();
     });
 
     it("serviceUrl", function () {
@@ -87,20 +82,18 @@ describe.only("Initialization", function () {
   describe("check custom options", function () {
     beforeEach(function () {
       this.input = document.createElement("input");
-      this.$input = $(this.input).appendTo($body);
-      this.instance = this.$input
-        .suggestions({
-          type: "NAME",
-          serviceUrl: "http://domain.com",
-        })
-        .suggestions();
+      document.body.append(this.input);
+      this.instance = new Suggestions(this.input, {
+        type: "NAME",
+        serviceUrl: "http://domain.com",
+      });
 
       helpers.returnGoodStatus(this.server);
     });
 
     afterEach(function () {
       this.instance.dispose();
-      this.$input.remove();
+      this.input.remove();
     });
 
     it("serviceUrl", function () {

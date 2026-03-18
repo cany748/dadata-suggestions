@@ -1,9 +1,9 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Enrich", function () {
   const serviceUrl = "some/url";
-  const $body = $(document.body);
   const fixtures = {
     poorName: [
       {
@@ -73,20 +73,18 @@ describe("Enrich", function () {
   };
 
   beforeEach(function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
 
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo($body);
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "ADDRESS",
-        token: "123",
-        geoLocation: false,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "ADDRESS",
+      token: "123",
+      geoLocation: false,
+    });
 
     helpers.returnGoodStatus(this.server);
     this.server.requests.length = 0;
@@ -94,7 +92,7 @@ describe("Enrich", function () {
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
@@ -241,7 +239,7 @@ describe("Enrich", function () {
   });
 
   it("Should ignore server `enrich:false` status", function () {
-    $.Suggestions.resetTokens();
+    Suggestions.resetTokens();
     this.instance.setOptions({
       token: "456",
     });

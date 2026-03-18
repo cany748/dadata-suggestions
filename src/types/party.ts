@@ -81,7 +81,7 @@ export const PARTY_TYPE = {
     const formattedFIO = highlightMatches(suggestion.data?.management?.name, currentValue);
     let address = suggestion.data?.address?.value || "";
 
-    const isMobile = globalThis.innerWidth <= this.options.mobileWidth
+    const isMobile = globalThis.innerWidth <= this.options.mobileWidth;
 
     if (isMobile) {
       options.maxLength = 50;

@@ -1,9 +1,9 @@
 import { fakeServer } from "nise";
 import helpers from "../helpers";
+import { Suggestions } from "@/suggestions";
 
 describe("Address constraints", function () {
   const serviceUrl = "/some/url";
-  const $body = $(document.body);
   const fixtures = {
     fullyAddress: {
       value: "Тульская обл, Узловский р-н, г Узловая, поселок Брусянский, ул Строителей, д 1-бара",
@@ -60,22 +60,20 @@ describe("Address constraints", function () {
     this.server = fakeServer.create();
 
     this.input = document.createElement("input");
-    this.$input = $(this.input).appendTo($body);
-    this.instance = this.$input
-      .suggestions({
-        serviceUrl,
-        type: "ADDRESS",
-        geoLocation: false,
-        enrichmentEnabled: false,
-      })
-      .suggestions();
+    document.body.append(this.input);
+    this.instance = new Suggestions(this.input, {
+      serviceUrl,
+      type: "ADDRESS",
+      geoLocation: false,
+      enrichmentEnabled: false,
+    });
 
     this.server.requests.length = 0;
   });
 
   afterEach(function () {
     this.instance.dispose();
-    this.$input.remove();
+    this.input.remove();
     this.server.restore();
   });
 
@@ -444,20 +442,19 @@ describe("Address constraints", function () {
 
   describe("in cooperation with other control", function () {
     beforeEach(function () {
-      this.$parent = $("<input>").appendTo($body);
+      this.parentInput = document.createElement("input");
+      document.body.append(this.parentInput);
 
-      this.$parent.suggestions({
+      this.parentInstance = new Suggestions(this.parentInput, {
         type: "ADDRESS",
         serviceUrl,
         geoLocation: false,
         bounds: "region-area",
       });
-
-      this.parentInstance = this.$parent.suggestions();
     });
 
     afterEach(function () {
-      this.$parent.remove();
+      this.parentInput.remove();
     });
 
     it("Should use parent data as a constraint in child", function () {
@@ -471,7 +468,7 @@ describe("Address constraints", function () {
       });
 
       this.instance.setOptions({
-        constraints: this.$parent,
+        constraints: this.parentInput,
       });
 
       this.input.value = "улица";
@@ -484,7 +481,7 @@ describe("Address constraints", function () {
     it("Should fill empty parent control when suggestion is selected in child", function () {
       this.instance.setOptions({
         bounds: "street-",
-        constraints: this.$parent,
+        constraints: this.parentInput,
       });
 
       this.input.value = "бара";
@@ -493,7 +490,7 @@ describe("Address constraints", function () {
       this.instance.selectedIndex = 0;
       this.instance.select(0);
 
-      expect(this.$parent.val()).toEqual("Тульская обл, Узловский р-н");
+      expect(this.parentInput.value).toEqual("Тульская обл, Узловский р-н");
       expect(this.parentInstance.selection.data).toEqual(
         jasmine.objectContaining({
           region: "Тульская",
@@ -512,7 +509,7 @@ describe("Address constraints", function () {
 
       this.instance.setOptions({
         bounds: "street-",
-        constraints: this.$parent,
+        constraints: this.parentInput,
       });
 
       this.input.value = "бара";
@@ -521,7 +518,7 @@ describe("Address constraints", function () {
       this.instance.selectedIndex = 0;
       this.instance.select(0);
 
-      expect(this.$parent.val()).toEqual("Тульская обл, Узловский р-н");
+      expect(this.parentInput.value).toEqual("Тульская обл, Узловский р-н");
       expect(this.parentInstance.selection.data).toEqual(
         jasmine.objectContaining({
           region: "Тульская",
@@ -543,7 +540,7 @@ describe("Address constraints", function () {
 
       this.instance.setOptions({
         bounds: "street-",
-        constraints: this.$parent,
+        constraints: this.parentInput,
       });
 
       this.input.value = "бара";
@@ -552,17 +549,17 @@ describe("Address constraints", function () {
       this.instance.selectedIndex = 0;
       this.instance.select(0);
 
-      expect(this.$parent.val()).toEqual("Тульская, Узловский");
+      expect(this.parentInput.value).toEqual("Тульская, Узловский");
       expect(this.parentInstance.selection.data).toEqual(selectionData);
     });
 
     it("Should spread data to all parents", function () {
-      this.$parent.val("Тульская обл, Узловский р-н");
+      this.parentInput.value = "Тульская обл, Узловский р-н";
       this.input.value = "г Узловая, поселок Брусянский, ул Строителей, д 1-бара";
 
       this.instance.setOptions({
         bounds: "city-",
-        constraints: this.$parent,
+        constraints: this.parentInput,
       });
 
       this.instance.fixData();
@@ -593,16 +590,16 @@ describe("Address constraints", function () {
         },
       ];
 
-      this.$parent.val("Санкт");
+      this.parentInput.value = "Санкт";
       this.parentInstance.onValueChange();
       this.server.respond(helpers.responseFor(suggestions));
       this.parentInstance.selectedIndex = 0;
-      helpers.hitEnter(this.$parent);
+      helpers.hitEnter(this.parentInput);
       this.server.respond(helpers.responseFor(suggestions));
 
       this.instance.setOptions({
         bounds: "city",
-        constraints: this.$parent,
+        constraints: this.parentInput,
       });
 
       this.input.value = "кол";

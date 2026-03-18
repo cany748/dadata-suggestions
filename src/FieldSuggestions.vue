@@ -25,10 +25,8 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, useTemplateRef } from "vue";
-import $ from "cash-dom";
-
 import type { Options } from "./types";
-import { Suggestions } from "./main";
+import { Suggestions } from "./suggestions";
 import { DATA_ATTR_KEY } from "./constants";
 
 defineOptions({ inheritAttrs: false });
@@ -45,10 +43,9 @@ let instance: Suggestions | undefined;
 
 onMounted(() => {
   if (inputRef.value) {
-    const inputElement = $(inputRef.value) as any;
-    inputElement[0]?.[DATA_ATTR_KEY]?.dispose?.();
-    instance = new Suggestions(inputElement, props.options);
-    inputElement[0]![DATA_ATTR_KEY] = instance as never;
+    (inputRef.value as any)[DATA_ATTR_KEY]?.dispose?.();
+    instance = new Suggestions(inputRef.value, props.options);
+    (inputRef.value as any)[DATA_ATTR_KEY] = instance;
   }
 });
 
