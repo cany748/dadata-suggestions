@@ -1,5 +1,5 @@
 import { matchers } from "../matchers";
-import type { SuggestionsType } from "../types";
+import type { SuggestionEmail, SuggestionsType } from "../types";
 
 const EMAIL_TYPE = {
   urlSuffix: "email",

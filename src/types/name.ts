@@ -1,4 +1,4 @@
-import type { SuggestionsType } from "../types";
+import type { SuggestionName, SuggestionsType } from "../types";
 
 import { WORD_DELIMITERS } from "../constants";
 import { escapeRegExChars, fieldsAreNotEmpty } from "../utils";

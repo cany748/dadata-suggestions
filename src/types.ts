@@ -697,7 +697,7 @@ export type SuggestionFms = {
   type: "0" | "1" | "2" | "3";
 };
 
-type SuggestionMap = {
+export type SuggestionMap = {
   NAME: SuggestionName;
   ADDRESS: SuggestionAddress;
   PARTY: SuggestionParty;

@@ -1,6 +1,6 @@
 import { fieldsAreNotEmpty, highlightMatches, isPlainObject, tokenize } from "../utils";
 import { matchers } from "../matchers";
-import type { SuggestionsType } from "../types";
+import type { SuggestionAddress, SuggestionsType } from "../types";
 import type { Suggestions } from "../suggestions";
 
 export const ADDRESS_STOPWORDS = [

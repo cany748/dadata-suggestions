@@ -1,6 +1,6 @@
 import { WORD_DELIMITERS } from "../constants";
 import { matchers } from "../matchers";
-import type { SuggestionsType } from "../types";
+import type { SuggestionBank, SuggestionsType } from "../types";
 import { highlightMatches } from "../utils";
 import { ADDRESS_COMPONENTS, ADDRESS_STOPWORDS } from "./address";
 

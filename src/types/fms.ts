@@ -1,5 +1,5 @@
 import { matchers } from "../matchers";
-import type { SuggestionsType } from "../types";
+import type { SuggestionFms, SuggestionsType } from "../types";
 
 export const FMS_TYPE = {
   urlSuffix: "fms_unit",

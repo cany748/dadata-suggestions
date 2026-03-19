@@ -22,6 +22,7 @@ import { EMAIL_TYPE } from "./types/email";
 import { BANK_TYPE } from "./types/bank";
 import { FMS_TYPE } from "./types/fms";
 import { Outward } from "./types/outward";
+import type { Options, Suggestion, SuggestionAny, SuggestionMap } from "./types";
 
 const types = {
   NAME: NAME_TYPE,
@@ -190,12 +191,6 @@ function ajax(options: any) {
 
   return result;
 }
-
-const contains = function (a: Element, b: Element) {
-  const bup = b && b.parentNode;
-
-  return a === bup || !!(bup && bup.nodeType === 1 && a.contains(bup));
-};
 
 /**
  * Compares two suggestion objects
@@ -434,7 +429,7 @@ class Constraint {
   }
 }
 
-class Suggestions {
+class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   public element: HTMLInputElement;
   public suggestions: Suggestion<SuggestionAny>[];
   public badQueries: string[];
@@ -468,7 +463,7 @@ class Suggestions {
   public dropdownDisabled: boolean;
   public requestMode: any;
 
-  constructor(el: HTMLInputElement, options: any) {
+  constructor(el: HTMLInputElement, options: Options<T>) {
     // Shared variables:
     this.element = el;
     this.suggestions = [];
