@@ -3,6 +3,7 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Nothing selected callback", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
   const fixtures = [
     { value: "Afghanistan", data: "Af" },
@@ -13,27 +14,27 @@ describe("Nothing selected callback", function () {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "ADDRESS",
       onSelect: () => {},
       geoLocation: false,
     });
 
-    helpers.returnGoodStatus(this.server);
+    helpers.returnGoodStatus(server);
 
-    this.server.respond();
-    this.server.requests.length = 0;
+    server.respond();
+    server.requests.length = 0;
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("Should be triggered on ENTER pressed with no suggestions visible", function () {
@@ -42,12 +43,12 @@ describe("Nothing selected callback", function () {
     };
     spyOn(options, "onSelectNothing");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    helpers.hitEnter(this.input);
+    input.value = "A";
+    instance.onValueChange();
+    helpers.hitEnter(input);
 
     expect(options.onSelectNothing.calls.count()).toEqual(1);
     expect(options.onSelectNothing).toHaveBeenCalledWith("A");
@@ -59,14 +60,14 @@ describe("Nothing selected callback", function () {
     };
     spyOn(options, "onSelectNothing");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures));
+    input.value = "A";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures));
 
-    helpers.hitEnter(this.input);
+    helpers.hitEnter(input);
 
     expect(options.onSelectNothing.calls.count()).toEqual(1);
     expect(options.onSelectNothing).toHaveBeenCalledWith("A");
@@ -78,14 +79,14 @@ describe("Nothing selected callback", function () {
     };
     spyOn(options, "onSelectNothing");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures));
+    input.value = "A";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures));
 
-    helpers.fireBlur(this.input);
+    helpers.fireBlur(input);
 
     expect(options.onSelectNothing.calls.count()).toEqual(1);
     expect(options.onSelectNothing).toHaveBeenCalledWith("A");

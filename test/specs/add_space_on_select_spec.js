@@ -6,31 +6,32 @@ describe("Adding space on selecting", function () {
   const serviceUrl = "/some/url";
 
   describe("For NAME controls", function () {
+    let input, instance, server;
     beforeEach(function () {
       Suggestions.resetTokens();
 
-      this.server = fakeServer.create();
+      server = fakeServer.create();
 
-      this.input = document.createElement("input");
-      document.body.append(this.input);
-      this.instance = new Suggestions(this.input, {
+      input = document.createElement("input");
+      document.body.append(input);
+      instance = new Suggestions(input, {
         serviceUrl,
         type: "NAME",
       });
 
-      helpers.returnPoorStatus(this.server);
+      helpers.returnPoorStatus(server);
     });
 
     afterEach(function () {
-      this.server.restore();
-      this.instance.dispose();
-      this.input.remove();
+      server.restore();
+      instance.dispose();
+      input.remove();
     });
 
     it("Should add SPACE at the end if only NAME specified", function () {
-      this.input.value = "N";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "N";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Name",
@@ -44,16 +45,16 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.keydown(this.input, 13);
+      instance.selectedIndex = 0;
+      helpers.keydown(input, 13);
 
-      expect(this.input.value).toEqual("Name ");
+      expect(input.value).toEqual("Name ");
     });
 
     it("Should add SPACE at the end if only SURNAME specified", function () {
-      this.input.value = "S";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "S";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Surname",
@@ -67,16 +68,16 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.keydown(this.input, 13);
+      instance.selectedIndex = 0;
+      helpers.keydown(input, 13);
 
-      expect(this.input.value).toEqual("Surname ");
+      expect(input.value).toEqual("Surname ");
     });
 
     it("Should add SPACE at the end if only NAME and PATRONYMIC specified", function () {
-      this.input.value = "N";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "N";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Name Patronymic",
@@ -90,16 +91,16 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.keydown(this.input, 13);
+      instance.selectedIndex = 0;
+      helpers.keydown(input, 13);
 
-      expect(this.input.value).toEqual("Name Patronymic ");
+      expect(input.value).toEqual("Name Patronymic ");
     });
 
     it("Should not add SPACE at the end if full name specified", function () {
-      this.input.value = "S";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "S";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Surname Name Patronymic",
@@ -113,21 +114,21 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.keydown(this.input, 13);
+      instance.selectedIndex = 0;
+      helpers.keydown(input, 13);
 
-      expect(this.input.value).toEqual("Surname Name Patronymic");
+      expect(input.value).toEqual("Surname Name Patronymic");
     });
 
     it("Should not add SPACE if only part expected", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         params: {
           parts: ["SURNAME"],
         },
       });
-      this.input.value = "S";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "S";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Surname",
@@ -141,23 +142,23 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.keydown(this.input, 13);
+      instance.selectedIndex = 0;
+      helpers.keydown(input, 13);
 
-      expect(this.input.value).toEqual("Surname");
+      expect(input.value).toEqual("Surname");
     });
 
     it("Should not add SPACE if only part expected (params set as function)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         params() {
           return {
             parts: ["SURNAME"],
           };
         },
       });
-      this.input.value = "S";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "S";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Surname",
@@ -171,41 +172,42 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.keydown(this.input, 13);
+      instance.selectedIndex = 0;
+      helpers.keydown(input, 13);
 
-      expect(this.input.value).toEqual("Surname");
+      expect(input.value).toEqual("Surname");
     });
   });
 
   describe("For ADDRESS controls", function () {
+    let input, instance, server;
     beforeEach(function () {
       Suggestions.resetTokens();
 
-      this.server = fakeServer.create();
+      server = fakeServer.create();
 
-      this.input = document.createElement("input");
-      document.body.append(this.input);
-      this.instance = new Suggestions(this.input, {
+      input = document.createElement("input");
+      document.body.append(input);
+      instance = new Suggestions(input, {
         serviceUrl,
         type: "ADDRESS",
         geoLocation: false,
         enrichmentEnabled: false,
       });
 
-      helpers.returnPoorStatus(this.server);
+      helpers.returnPoorStatus(server);
     });
 
     afterEach(function () {
-      this.instance.dispose();
-      this.server.restore();
-      this.input.remove();
+      instance.dispose();
+      server.restore();
+      input.remove();
     });
 
     it("Should add SPACE at the end if only COUNTRY specified", function () {
-      this.input.value = "Р";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "Р";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Россия",
@@ -216,16 +218,16 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.keydown(this.input, 13);
+      instance.selectedIndex = 0;
+      helpers.keydown(input, 13);
 
-      expect(this.input.value).toEqual("Россия ");
+      expect(input.value).toEqual("Россия ");
     });
 
     it("Should add SPACE at the end if COUNTRY..HOUSE specified", function () {
-      this.input.value = "Р";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "Р";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Россия, г Москва, ул Арбат, д 1",
@@ -242,16 +244,16 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.hitEnter(this.input);
+      instance.selectedIndex = 0;
+      helpers.hitEnter(input);
 
-      expect(this.input.value).toEqual("Россия, г Москва, ул Арбат, д 1 ");
+      expect(input.value).toEqual("Россия, г Москва, ул Арбат, д 1 ");
     });
 
     it("Should not add SPACE at the end if FLAT specified", function () {
-      this.input.value = "Р";
-      this.instance.onValueChange();
-      this.server.respond(
+      input.value = "Р";
+      instance.onValueChange();
+      server.respond(
         helpers.responseFor([
           {
             value: "Россия, г Москва, ул Арбат, д 1, кв 22",
@@ -270,10 +272,10 @@ describe("Adding space on selecting", function () {
         ]),
       );
 
-      this.instance.selectedIndex = 0;
-      helpers.hitEnter(this.input);
+      instance.selectedIndex = 0;
+      helpers.hitEnter(input);
 
-      expect(this.input.value).toEqual("Россия, г Москва, ул Арбат, д 1, кв 22");
+      expect(input.value).toEqual("Россия, г Москва, ул Арбат, д 1, кв 22");
     });
   });
 });

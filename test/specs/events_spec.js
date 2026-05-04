@@ -3,41 +3,42 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Element events", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "NAME",
     });
 
-    helpers.returnGoodStatus(this.server);
+    helpers.returnGoodStatus(server);
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("`suggestions-select` should be triggered", function () {
     const suggestion = { value: "A", data: "B" };
     let eventArgs;
 
-    this.input.addEventListener("suggestions-select", function (e) {
+    input.addEventListener("suggestions-select", function (e) {
       eventArgs = e.detail;
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor([suggestion]));
-    this.instance.select(0);
+    input.value = "A";
+    instance.onValueChange();
+    server.respond(helpers.responseFor([suggestion]));
+    instance.select(0);
 
     expect(eventArgs).toEqual([helpers.appendUnrestrictedValue(suggestion), true]);
   });
@@ -45,15 +46,15 @@ describe("Element events", function () {
   it("`suggestions-selectnothing` should be triggered", function () {
     let eventArgs;
 
-    this.input.addEventListener("suggestions-selectnothing", function (e) {
+    input.addEventListener("suggestions-selectnothing", function (e) {
       eventArgs = e.detail;
     });
 
-    this.instance.selectedIndex = -1;
+    instance.selectedIndex = -1;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    helpers.hitEnter(this.input);
+    input.value = "A";
+    instance.onValueChange();
+    helpers.hitEnter(input);
 
     expect(eventArgs).toEqual(["A"]);
   });
@@ -62,18 +63,18 @@ describe("Element events", function () {
     const suggestion = { value: "A", data: "B" };
     let eventArgs;
 
-    this.input.addEventListener("suggestions-invalidateselection", function (e) {
+    input.addEventListener("suggestions-invalidateselection", function (e) {
       eventArgs = e.detail;
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor([suggestion]));
-    this.instance.select(0);
+    input.value = "A";
+    instance.onValueChange();
+    server.respond(helpers.responseFor([suggestion]));
+    instance.select(0);
 
-    this.input.value = "Aaaa";
-    this.instance.onValueChange();
-    helpers.hitEnter(this.input);
+    input.value = "Aaaa";
+    instance.onValueChange();
+    helpers.hitEnter(input);
 
     expect(eventArgs).toEqual([helpers.appendUnrestrictedValue(suggestion)]);
   });
@@ -87,25 +88,25 @@ describe("Element events", function () {
       geoLocation: false,
     });
 
-    spyOn(this.instance, "onParentDispose");
+    spyOn(instance, "onParentDispose");
 
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: parentInput,
     });
 
     parentInstance.dispose();
     parentInput.remove();
 
-    expect(this.instance.onParentDispose).toHaveBeenCalled();
+    expect(instance.onParentDispose).toHaveBeenCalled();
   });
 
   it("`suggestions-set` should be triggered", function () {
     let triggered = false;
-    this.input.addEventListener("suggestions-set", () => {
+    input.addEventListener("suggestions-set", () => {
       triggered = true;
     });
 
-    this.instance.setSuggestion({
+    instance.setSuggestion({
       value: "somethind",
       data: {},
     });
@@ -115,14 +116,14 @@ describe("Element events", function () {
 
   it("`suggestions-fixdata` should be triggered", function () {
     let triggered = false;
-    this.input.addEventListener("suggestions-fixdata", () => {
+    input.addEventListener("suggestions-fixdata", () => {
       triggered = true;
     });
 
-    this.input.value = "г Москва";
-    this.instance.fixData();
+    input.value = "г Москва";
+    instance.fixData();
 
-    this.server.respond("GET", /address/, [
+    server.respond("GET", /address/, [
       200,
       { "Content-type": "application/json" },
       JSON.stringify([

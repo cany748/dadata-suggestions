@@ -2,16 +2,17 @@ import { fakeServer } from "nise";
 import { Suggestions } from "@/suggestions";
 
 describe("Status features", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
   const token = "1234";
 
   beforeEach(function () {
     Suggestions.resetTokens();
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "NAME",
       token,
@@ -19,27 +20,27 @@ describe("Status features", function () {
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
     Suggestions.resetTokens();
   });
 
   it("Should send status request with token", function () {
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].url).toMatch(/status\/fio/);
-    expect(this.server.requests[0].requestHeaders.Authorization).toEqual(`Token ${token}`);
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].url).toMatch(/status\/fio/);
+    expect(server.requests[0].requestHeaders.Authorization).toEqual(`Token ${token}`);
   });
 
   it("Should send status request without token", function () {
-    this.server.requests.length = 0;
-    this.instance.setOptions({
+    server.requests.length = 0;
+    instance.setOptions({
       token: null,
     });
 
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].url).toMatch(/status\/fio/);
-    expect(this.server.requests[0].requestHeaders.Authorization).toBeUndefined();
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].url).toMatch(/status\/fio/);
+    expect(server.requests[0].requestHeaders.Authorization).toBeUndefined();
   });
 
   it("Should invoke `onSearchError` callback if status request failed", function () {
@@ -48,29 +49,30 @@ describe("Status features", function () {
       token: "456",
     };
     spyOn(options, "onSearchError");
-    this.instance.setOptions(options);
+    instance.setOptions(options);
 
-    this.server.respond([401, {}, "Not Authorized"]);
+    server.respond([401, {}, "Not Authorized"]);
 
     expect(options.onSearchError).toHaveBeenCalled();
   });
 
   it("Should use url param (if it passed) instead of serviceUrl", function () {
-    this.server.requests.length = 0;
-    this.instance.setOptions({
+    server.requests.length = 0;
+    instance.setOptions({
       token: null,
       url: "http://unchangeable/url",
     });
 
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].url).toEqual("http://unchangeable/url");
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].url).toEqual("http://unchangeable/url");
   });
 
   describe("Several instances with the same token", function () {
+    let input2, instance2;
     beforeEach(function () {
-      this.input2 = document.createElement("input");
-      document.body.append(this.input2);
-      this.instance2 = new Suggestions(this.input2, {
+      input2 = document.createElement("input");
+      document.body.append(input2);
+      instance2 = new Suggestions(input2, {
         serviceUrl,
         type: "NAME",
         token,
@@ -78,21 +80,21 @@ describe("Status features", function () {
     });
 
     afterEach(function () {
-      this.instance2.dispose();
-      this.input2.remove();
+      instance2.dispose();
+      input2.remove();
     });
 
     it("Should use the same authorization query", function () {
-      expect(this.server.requests.length).toEqual(1);
+      expect(server.requests.length).toEqual(1);
     });
 
     it("Should make another request for controls of different types", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         type: "ADDRESS",
         geoLocation: false,
       });
 
-      expect(this.server.requests.length).toEqual(2);
+      expect(server.requests.length).toEqual(2);
     });
 
     it("Should invoke `onSearchError` callback on controls with same type and token", function () {
@@ -100,9 +102,9 @@ describe("Status features", function () {
         onSearchError: () => {},
       };
       spyOn(options, "onSearchError");
-      this.instance2.setOptions(options);
+      instance2.setOptions(options);
 
-      this.server.respond([401, {}, "Not Authorized"]);
+      server.respond([401, {}, "Not Authorized"]);
 
       expect(options.onSearchError).toHaveBeenCalled();
     });

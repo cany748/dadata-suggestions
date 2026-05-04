@@ -10,6 +10,7 @@ export default factoryConfig(
     files: ["test/specs/*"],
     rules: {
       "no-undef": "off",
+      "e18e/prefer-static-regex": "off",
     },
   },
 );

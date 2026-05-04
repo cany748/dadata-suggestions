@@ -5,72 +5,73 @@ import { DEFAULT_OPTIONS, Suggestions } from "@/suggestions";
 import { DATA_ATTR_KEY } from "@/constants";
 
 describe("Base features", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "NAME",
       // disable mobile view features
       mobileWidth: Number.NaN,
     });
 
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   describe("Misc", function () {
     it("Should get current value", function () {
-      this.input.value = "Jam";
-      this.instance.onValueChange();
+      input.value = "Jam";
+      instance.onValueChange();
 
-      this.server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
+      server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
 
-      expect(this.instance.visible).toBe(true);
-      expect(this.instance.currentValue).toEqual("Jam");
+      expect(instance.visible).toBe(true);
+      expect(instance.currentValue).toEqual("Jam");
     });
 
     it("Should convert suggestions format", function () {
-      this.input.value = "A";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor(["Alex", "Ammy", "Anny"]));
-      expect(this.instance.suggestions[0]).toEqual(helpers.appendUnrestrictedValue({ value: "Alex", data: null }));
-      expect(this.instance.suggestions[1]).toEqual(helpers.appendUnrestrictedValue({ value: "Ammy", data: null }));
-      expect(this.instance.suggestions[2]).toEqual(helpers.appendUnrestrictedValue({ value: "Anny", data: null }));
+      input.value = "A";
+      instance.onValueChange();
+      server.respond(helpers.responseFor(["Alex", "Ammy", "Anny"]));
+      expect(instance.suggestions[0]).toEqual(helpers.appendUnrestrictedValue({ value: "Alex", data: null }));
+      expect(instance.suggestions[1]).toEqual(helpers.appendUnrestrictedValue({ value: "Ammy", data: null }));
+      expect(instance.suggestions[2]).toEqual(helpers.appendUnrestrictedValue({ value: "Anny", data: null }));
     });
 
     it("Should destroy suggestions instance", function () {
       const div = document.createElement("div");
 
-      div.append(this.input);
+      div.append(input);
 
-      expect(this.input[DATA_ATTR_KEY]).toBeDefined();
+      expect(input[DATA_ATTR_KEY]).toBeDefined();
 
-      this.instance.dispose();
+      instance.dispose();
 
-      expect(this.input[DATA_ATTR_KEY]).toBeUndefined();
+      expect(input[DATA_ATTR_KEY]).toBeUndefined();
       for (const selector of [".suggestions-suggestions", ".suggestions-addon", ".suggestions-constraints"]) {
         expect(div.querySelectorAll(selector).length).toEqual(0);
       }
     });
 
     it("Should set width to be greater than zero", function () {
-      this.input.value = "Jam";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
-      expect(this.instance.container.offsetWidth).toBeGreaterThan(0);
+      input.value = "Jam";
+      instance.onValueChange();
+      server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
+      expect(instance.container.offsetWidth).toBeGreaterThan(0);
     });
 
     it("Should call beforeRender and pass container element", function () {
@@ -78,33 +79,33 @@ describe("Base features", function () {
         beforeRender() {},
       };
       spyOn(options, "beforeRender");
-      this.instance.setOptions(options);
+      instance.setOptions(options);
 
-      this.input.value = "Jam";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
+      input.value = "Jam";
+      instance.onValueChange();
+      server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
 
       expect(options.beforeRender.calls.count()).toEqual(1);
-      expect(options.beforeRender).toHaveBeenCalledWith(this.instance.container);
+      expect(options.beforeRender).toHaveBeenCalledWith(instance.container);
     });
 
     it("Should prevent Ajax requests if previous query with matching root failed.", function () {
-      this.instance.setOptions({ preventBadQueries: true });
-      this.input.value = "Jam";
-      this.instance.onValueChange();
+      instance.setOptions({ preventBadQueries: true });
+      input.value = "Jam";
+      instance.onValueChange();
 
-      expect(this.server.requests.length).toEqual(1);
-      this.server.respond(helpers.responseFor([]));
+      expect(server.requests.length).toEqual(1);
+      server.respond(helpers.responseFor([]));
 
-      this.input.value = "Jama";
-      this.instance.onValueChange();
+      input.value = "Jama";
+      instance.onValueChange();
 
-      expect(this.server.requests.length).toEqual(1);
+      expect(server.requests.length).toEqual(1);
 
-      this.input.value = "Jamai";
-      this.instance.onValueChange();
+      input.value = "Jamai";
+      instance.onValueChange();
 
-      expect(this.server.requests.length).toEqual(1);
+      expect(server.requests.length).toEqual(1);
     });
   });
 
@@ -116,11 +117,11 @@ describe("Base features", function () {
       };
       spyOn(options, "onSelect");
 
-      this.instance.setOptions(options);
-      this.input.value = "A";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor(suggestions));
-      this.instance.select(0);
+      instance.setOptions(options);
+      input.value = "A";
+      instance.onValueChange();
+      server.respond(helpers.responseFor(suggestions));
+      instance.select(0);
 
       expect(options.onSelect.calls.count()).toEqual(1);
       expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), true);
@@ -142,11 +143,11 @@ describe("Base features", function () {
       };
       spyOn(options, "onSelect");
 
-      this.instance.setOptions(options);
-      this.input.value = "Abc";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor(suggestions));
-      this.instance.select(0);
+      instance.setOptions(options);
+      input.value = "Abc";
+      instance.onValueChange();
+      server.respond(helpers.responseFor(suggestions));
+      instance.select(0);
 
       expect(options.onSelect.calls.count()).toEqual(1);
       expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), false);
@@ -154,8 +155,9 @@ describe("Base features", function () {
   });
 
   describe("onSuggestionsFetch callback", function () {
+    let suggestions;
     beforeEach(function () {
-      this.suggestions = [
+      suggestions = [
         helpers.appendUnrestrictedValue({
           value: "Afghanistan",
           data: { country: "Afghanistan" },
@@ -170,8 +172,8 @@ describe("Base features", function () {
         }),
       ];
 
-      this.input.value = "A";
-      this.instance.onValueChange();
+      input.value = "A";
+      instance.onValueChange();
     });
 
     it("invoked", function () {
@@ -181,60 +183,60 @@ describe("Base features", function () {
 
       spyOn(options, "onSuggestionsFetch");
 
-      this.instance.setOptions(options);
+      instance.setOptions(options);
 
-      this.server.respond(helpers.responseFor(this.suggestions));
+      server.respond(helpers.responseFor(suggestions));
 
       expect(options.onSuggestionsFetch.calls.count()).toEqual(1);
-      expect(options.onSuggestionsFetch).toHaveBeenCalledWith(this.suggestions);
+      expect(options.onSuggestionsFetch).toHaveBeenCalledWith(suggestions);
     });
 
     it("can modify argument", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         onSuggestionsFetch(suggestions) {
           // Move first option to the end
           suggestions.push(suggestions.shift());
         },
       });
 
-      this.server.respond(helpers.responseFor(this.suggestions));
+      server.respond(helpers.responseFor(suggestions));
 
-      const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
+      const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
       // Second option become first
-      expect(items[0]).toContainText(this.suggestions[1].value);
-      expect(items[1]).toContainText(this.suggestions[2].value);
+      expect(items[0]).toContainText(suggestions[1].value);
+      expect(items[1]).toContainText(suggestions[2].value);
       // First option become last
-      expect(items[2]).toContainText(this.suggestions[0].value);
+      expect(items[2]).toContainText(suggestions[0].value);
     });
 
     it("can use returned array", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         onSuggestionsFetch(suggestions) {
           // Return new array
           return [suggestions[1], suggestions[2], suggestions[0]];
         },
       });
 
-      this.server.respond(helpers.responseFor(this.suggestions));
+      server.respond(helpers.responseFor(suggestions));
 
-      const items = this.instance.container.querySelectorAll(".suggestions-suggestion");
+      const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
       // Second option become first
-      expect(items[0]).toContainText(this.suggestions[1].value);
-      expect(items[1]).toContainText(this.suggestions[2].value);
+      expect(items[0]).toContainText(suggestions[1].value);
+      expect(items[1]).toContainText(suggestions[2].value);
       // First option become last
-      expect(items[2]).toContainText(this.suggestions[0].value);
+      expect(items[2]).toContainText(suggestions[0].value);
     });
   });
 
   describe("Hint message", function () {
     it("Should display default hint message above suggestions", function () {
-      this.input.value = "jam";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor(["Jamaica"]));
+      input.value = "jam";
+      instance.onValueChange();
+      server.respond(helpers.responseFor(["Jamaica"]));
 
-      const hints = this.instance.container.querySelectorAll(".suggestions-hint");
+      const hints = instance.container.querySelectorAll(".suggestions-hint");
 
       expect(hints.length).toEqual(1);
       expect(hints[0].textContent).toEqual(DEFAULT_OPTIONS.hint);
@@ -242,45 +244,45 @@ describe("Base features", function () {
 
     it("Should display custom hint message above suggestions", function () {
       const customHint = "This is custon hint";
-      this.instance.setOptions({
+      instance.setOptions({
         hint: customHint,
       });
 
-      this.input.value = "jam";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor(["Jamaica"]));
+      input.value = "jam";
+      instance.onValueChange();
+      server.respond(helpers.responseFor(["Jamaica"]));
 
-      const hints = this.instance.container.querySelectorAll(".suggestions-hint");
+      const hints = instance.container.querySelectorAll(".suggestions-hint");
 
       expect(hints.length).toEqual(1);
       expect(hints[0].textContent).toEqual(customHint);
     });
 
     it("Should not display any hint message above suggestions", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         hint: false,
       });
 
-      this.input.value = "jam";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor(["Jamaica"]));
+      input.value = "jam";
+      instance.onValueChange();
+      server.respond(helpers.responseFor(["Jamaica"]));
 
-      const hints = this.instance.container.querySelectorAll(".suggestions-hint");
+      const hints = instance.container.querySelectorAll(".suggestions-hint");
 
       expect(hints.length).toEqual(0);
     });
 
     it("Should not display any hint message for narrow-screen (mobile) view", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         hint: false,
         mobileWidth: 20_000,
       });
 
-      this.input.value = "jam";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor(["Jamaica"]));
+      input.value = "jam";
+      instance.onValueChange();
+      server.respond(helpers.responseFor(["Jamaica"]));
 
-      const hints = this.instance.container.querySelectorAll(".suggestions-hint");
+      const hints = instance.container.querySelectorAll(".suggestions-hint");
 
       expect(hints.length).toEqual(0);
     });
@@ -288,71 +290,71 @@ describe("Base features", function () {
 
   describe("Language", function () {
     it("Should not include default language into request", function () {
-      this.input.value = "Jam";
-      this.instance.onValueChange();
+      input.value = "Jam";
+      instance.onValueChange();
 
-      expect(this.server.requests[0].requestBody).not.toContain("language");
+      expect(server.requests[0].requestBody).not.toContain("language");
     });
 
     it("Should include custom language into request", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         language: "en",
       });
-      this.input.value = "Jam";
-      this.instance.onValueChange();
+      input.value = "Jam";
+      instance.onValueChange();
 
-      expect(this.server.requests[0].requestBody).toContain('"language":"en"');
+      expect(server.requests[0].requestBody).toContain('"language":"en"');
     });
   });
 
   describe("Custom params", function () {
     it("Should use custom query parameter name", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         paramName: "custom",
       });
 
-      this.input.value = "Jam";
-      this.instance.onValueChange();
+      input.value = "Jam";
+      instance.onValueChange();
 
-      expect(this.server.requests[0].requestBody).toContain('"custom":"Jam"');
+      expect(server.requests[0].requestBody).toContain('"custom":"Jam"');
     });
 
     it("Should include params option into request", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         params: {
           a: 1,
         },
       });
 
-      this.input.value = "Jam";
-      this.instance.onValueChange();
+      input.value = "Jam";
+      instance.onValueChange();
 
-      expect(this.server.requests[0].requestBody).toContain('{"a":1,');
+      expect(server.requests[0].requestBody).toContain('{"a":1,');
     });
 
     it("Should include params option into request when it is a function", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         params() {
           return { a: 2 };
         },
       });
 
-      this.input.value = "Jam";
-      this.instance.onValueChange();
+      input.value = "Jam";
+      instance.onValueChange();
 
-      expect(this.server.requests[0].requestBody).toContain('{"a":2,');
+      expect(server.requests[0].requestBody).toContain('{"a":2,');
     });
   });
 
   describe("Headers", function () {
     it("Should send custom HTTP headers", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         headers: { "X-my-header": "blabla" },
       });
-      this.input.value = "jam";
-      this.instance.onValueChange();
+      input.value = "jam";
+      instance.onValueChange();
 
-      expect(this.server.requests[0].requestHeaders["X-my-header"]).toEqual("blabla");
+      expect(server.requests[0].requestHeaders["X-my-header"]).toEqual("blabla");
     });
   });
 });

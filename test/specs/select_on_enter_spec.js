@@ -3,6 +3,7 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Select on Enter", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
   const fixtures = {
     A: [
@@ -249,17 +250,17 @@ describe("Select on Enter", function () {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
-    this.server.respondWith("POST", /suggest/, function (xhr) {
+    server = fakeServer.create();
+    server.respondWith("POST", /suggest/, function (xhr) {
       const request = JSON.parse(xhr.requestBody);
       const query = request && request.query;
       xhr.respond(200, { "Content-type": "application/json" }, JSON.stringify(query ? { suggestions: fixtures[query] } : {}));
     });
-    helpers.returnPoorStatus(this.server);
+    helpers.returnPoorStatus(server);
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "ADDRESS",
       onSelect: () => {},
@@ -267,14 +268,14 @@ describe("Select on Enter", function () {
       enrichmentEnabled: false,
     });
 
-    this.server.respond();
-    this.server.requests.length = 0;
+    server.respond();
+    server.requests.length = 0;
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("Should trigger on full match", function () {
@@ -283,15 +284,15 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond();
+    input.value = "A";
+    instance.onValueChange();
+    server.respond();
 
-    this.input.value = "Albania";
-    helpers.hitEnter(this.input);
+    input.value = "Albania";
+    helpers.hitEnter(input);
 
     expect(options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue({ value: "Albania", data: "Al" }), true);
@@ -303,15 +304,15 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond();
+    input.value = "A";
+    instance.onValueChange();
+    server.respond();
 
-    this.input.value = "Albania";
-    helpers.hitEnter(this.input);
+    input.value = "Albania";
+    helpers.hitEnter(input);
 
     expect(options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue({ value: "Albania", data: "Al" }), true);
@@ -323,14 +324,14 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
+    instance.setOptions(options);
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond();
+    input.value = "A";
+    instance.onValueChange();
+    server.respond();
 
-    this.instance.selectedIndex = 2;
-    helpers.hitEnter(this.input);
+    instance.selectedIndex = 2;
+    helpers.hitEnter(input);
 
     expect(options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue({ value: "Andorra", data: "An" }), true);
@@ -342,15 +343,15 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond();
+    input.value = "A";
+    instance.onValueChange();
+    server.respond();
 
-    this.input.value = "Alba";
-    helpers.hitEnter(this.input);
+    input.value = "Alba";
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -361,15 +362,15 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond();
+    input.value = "A";
+    instance.onValueChange();
+    server.respond();
 
-    this.input.value = "Alge";
-    helpers.hitEnter(this.input);
+    input.value = "Alge";
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -380,13 +381,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "тверская оленинский упыри";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "тверская оленинский упыри";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(
       helpers.appendUnrestrictedValue({
@@ -403,13 +404,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "г москва, зеленоград";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "г москва, зеленоград";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(
       helpers.appendUnrestrictedValue({
@@ -426,13 +427,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "новосибирская";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "новосибирская";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -443,13 +444,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "Россия, обл Тверская, р-н Оленинский, д Упыри ул";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "Россия, обл Тверская, р-н Оленинский, д Упыри ул";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -460,13 +461,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "москва мира";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "москва мира";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -477,13 +478,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "ставропольский средний зеленая 36";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "ставропольский средний зеленая 36";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     // expect to select first matching suggestion
     expect(options.onSelect).toHaveBeenCalledWith(
@@ -501,13 +502,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "новосибирск ленина 12";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "новосибирск ленина 12";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     // expect to select first matching suggestion
     expect(options.onSelect).toHaveBeenCalledWith(
@@ -525,13 +526,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "новосибирск ленина 2";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "новосибирск ленина 2";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -542,13 +543,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "ленина 36";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "ленина 36";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -559,13 +560,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "средний зеленая 36";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "средний зеленая 36";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -576,13 +577,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "зеленоград мкр";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "зеленоград мкр";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -594,13 +595,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "Петр Иванович";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "Петр Иванович";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -611,13 +612,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "москва енисейская24";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "москва енисейская24";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(
       helpers.appendUnrestrictedValue({
@@ -634,13 +635,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "москва енисейская 24стр2";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "москва енисейская 24стр2";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(
       helpers.appendUnrestrictedValue({
@@ -657,13 +658,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "москва енисейская24г";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "москва енисейская24г";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -674,13 +675,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "респ Татарстан, г Набережные Челны, ул Нижняя Боровецкая, д 1";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "респ Татарстан, г Набережные Челны, ул Нижняя Боровецкая, д 1";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -691,13 +692,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "г Красноярск, ул Авиаторов, д 5";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "г Красноярск, ул Авиаторов, д 5";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -708,13 +709,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "санкт-петербург пугачева";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "санкт-петербург пугачева";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(
       helpers.appendUnrestrictedValue({
@@ -731,13 +732,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "санкт петербург пугачёва 15-44";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "санкт петербург пугачёва 15-44";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(
       helpers.appendUnrestrictedValue({
@@ -755,13 +756,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "хф 7707545900";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "хф 7707545900";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["хф 7707545900"][0]), true);
   });
@@ -773,13 +774,13 @@ describe("Select on Enter", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "1057746629115";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "1057746629115";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["1057746629115"][0]), true);
   });
@@ -789,17 +790,17 @@ describe("Select on Enter", function () {
       type: "PARTY",
       onSelect() {},
     };
-    helpers.returnGoodStatus(this.server);
+    helpers.returnGoodStatus(server);
 
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "хф 770754";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "хф 770754";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["хф 770754"][0]), true);
   });
@@ -809,17 +810,17 @@ describe("Select on Enter", function () {
       type: "BANK",
       onSelect() {},
     };
-    helpers.returnGoodStatus(this.server);
+    helpers.returnGoodStatus(server);
 
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "альфа 04452";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "альфа 04452";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["альфа 04452"][0]), true);
   });
@@ -829,19 +830,19 @@ describe("Select on Enter", function () {
       type: "PARTY",
       onSelect() {},
     };
-    helpers.returnGoodStatus(this.server);
+    helpers.returnGoodStatus(server);
 
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "газпром 1027700055360";
-    this.instance.onValueChange();
-    this.server.respond();
-    helpers.hitEnter(this.input);
+    input.value = "газпром 1027700055360";
+    instance.onValueChange();
+    server.respond();
+    helpers.hitEnter(input);
 
-    expect(this.instance.suggestions.length).toEqual(2);
+    expect(instance.suggestions.length).toEqual(2);
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 });

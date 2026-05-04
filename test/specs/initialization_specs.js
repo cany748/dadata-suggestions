@@ -3,6 +3,7 @@ import helpers from "../helpers";
 import { DEFAULT_OPTIONS, Suggestions } from "@/suggestions";
 
 describe.only("Initialization", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
 
   /**
@@ -11,12 +12,11 @@ describe.only("Initialization", function () {
    */
   function checkInitialized() {
     it("Should request service status", function () {
-      expect(this.server.requests.length).toBe(1);
-      expect(this.server.requests[0].url).toContain("/status/fio");
+      expect(server.requests.length).toBe(1);
+      expect(server.requests[0].url).toContain("/status/fio");
     });
 
     it("Should create all additional components", function () {
-      const instance = this.instance;
       expect(instance.wrapper).toBeInstanceOf(HTMLElement);
       expect(instance.container).toBeInstanceOf(HTMLElement);
     });
@@ -25,32 +25,32 @@ describe.only("Initialization", function () {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
   });
 
   afterEach(function () {
-    this.server.restore();
+    server.restore();
   });
 
   describe("visible element", function () {
     beforeEach(function () {
-      this.input = document.createElement("input");
-      document.body.append(this.input);
-      this.instance = new Suggestions(this.input, {
+      input = document.createElement("input");
+      document.body.append(input);
+      instance = new Suggestions(input, {
         serviceUrl,
         type: "NAME",
       });
 
-      helpers.returnGoodStatus(this.server);
+      helpers.returnGoodStatus(server);
     });
 
     afterEach(function () {
-      this.instance.dispose();
-      this.input.remove();
+      instance.dispose();
+      input.remove();
     });
 
     it("Should initialize suggestions options", function () {
-      expect(this.instance.options.serviceUrl).toEqual(serviceUrl);
+      expect(instance.options.serviceUrl).toEqual(serviceUrl);
     });
 
     checkInitialized();
@@ -58,22 +58,22 @@ describe.only("Initialization", function () {
 
   describe("check defaults", function () {
     beforeEach(function () {
-      this.input = document.createElement("input");
-      document.body.append(this.input);
-      this.instance = new Suggestions(this.input, {
+      input = document.createElement("input");
+      document.body.append(input);
+      instance = new Suggestions(input, {
         type: "NAME",
       });
 
-      helpers.returnGoodStatus(this.server);
+      helpers.returnGoodStatus(server);
     });
 
     afterEach(function () {
-      this.instance.dispose();
-      this.input.remove();
+      instance.dispose();
+      input.remove();
     });
 
     it("serviceUrl", function () {
-      expect(this.instance.options.serviceUrl).toEqual(DEFAULT_OPTIONS.serviceUrl);
+      expect(instance.options.serviceUrl).toEqual(DEFAULT_OPTIONS.serviceUrl);
     });
 
     checkInitialized();
@@ -81,23 +81,23 @@ describe.only("Initialization", function () {
 
   describe("check custom options", function () {
     beforeEach(function () {
-      this.input = document.createElement("input");
-      document.body.append(this.input);
-      this.instance = new Suggestions(this.input, {
+      input = document.createElement("input");
+      document.body.append(input);
+      instance = new Suggestions(input, {
         type: "NAME",
         serviceUrl: "http://domain.com",
       });
 
-      helpers.returnGoodStatus(this.server);
+      helpers.returnGoodStatus(server);
     });
 
     afterEach(function () {
-      this.instance.dispose();
-      this.input.remove();
+      instance.dispose();
+      input.remove();
     });
 
     it("serviceUrl", function () {
-      expect(this.instance.options.serviceUrl).toEqual("http://domain.com");
+      expect(instance.options.serviceUrl).toEqual("http://domain.com");
     });
 
     checkInitialized();

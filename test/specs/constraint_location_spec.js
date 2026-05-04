@@ -2,12 +2,13 @@ import { fakeServer } from "nise";
 import { Suggestions } from "@/suggestions";
 
 describe("Constraint Location", function () {
+  let input, instance, server;
   beforeEach(function () {
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl: "service/url",
       type: "ADDRESS",
       geoLocation: false,
@@ -15,9 +16,9 @@ describe("Constraint Location", function () {
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("should skip unnecessary fields", function () {
@@ -29,7 +30,7 @@ describe("Constraint Location", function () {
         postal_code: "445020",
         okato: "36440373000",
       },
-      this.instance,
+      instance,
     );
 
     expect(location.getFields()).toEqual({
@@ -45,7 +46,7 @@ describe("Constraint Location", function () {
         city: "Тольятти",
         kladr_id: "6300000700000",
       },
-      this.instance,
+      instance,
     );
 
     expect(Object.keys(location.getFields())).toEqual(["kladr_id"]);
@@ -60,7 +61,7 @@ describe("Constraint Location", function () {
         city_fias_id: "1000000",
         street_fias_id: "1000000",
       },
-      this.instance,
+      instance,
     );
 
     expect(Object.keys(location.getFields())).toEqual(["city_fias_id", "street_fias_id"]);
@@ -71,11 +72,11 @@ describe("Constraint Location", function () {
       {
         city: "Тольятти",
       },
-      this.instance,
+      instance,
     );
     const expectedSpecificity = 13;
 
-    expect(this.instance.type.dataComponents[expectedSpecificity].id).toEqual("city");
+    expect(instance.type.dataComponents[expectedSpecificity].id).toEqual("city");
     expect(location.specificity).toEqual(expectedSpecificity);
   });
 
@@ -84,11 +85,11 @@ describe("Constraint Location", function () {
       {
         kladr_id: "6300000700000",
       },
-      this.instance,
+      instance,
     );
     const expectedSpecificity = 13;
 
-    expect(this.instance.type.dataComponents[expectedSpecificity].id).toEqual("city");
+    expect(instance.type.dataComponents[expectedSpecificity].id).toEqual("city");
     expect(location.specificity).toEqual(expectedSpecificity);
     expect(location.significantKladr).toEqual("63000007");
   });
@@ -98,11 +99,11 @@ describe("Constraint Location", function () {
       {
         kladr_id: "5000004000000",
       },
-      this.instance,
+      instance,
     );
     const expectedSpecificity = 13;
 
-    expect(this.instance.type.dataComponents[expectedSpecificity].id).toEqual("city");
+    expect(instance.type.dataComponents[expectedSpecificity].id).toEqual("city");
     expect(location.specificity).toEqual(expectedSpecificity);
     expect(location.significantKladr).toEqual("50000040");
   });
@@ -112,11 +113,11 @@ describe("Constraint Location", function () {
       {
         kladr_id: "50000040000016000",
       },
-      this.instance,
+      instance,
     );
     const expectedSpecificity = 22;
 
-    expect(this.instance.type.dataComponents[expectedSpecificity].id).toEqual("street");
+    expect(instance.type.dataComponents[expectedSpecificity].id).toEqual("street");
     expect(location.specificity).toEqual(expectedSpecificity);
     expect(location.significantKladr).toEqual("500000400000160");
   });
@@ -127,7 +128,7 @@ describe("Constraint Location", function () {
         country: "россия",
         region: "самарская",
       },
-      this.instance,
+      instance,
     );
 
     expect(
@@ -181,7 +182,7 @@ describe("Constraint Location", function () {
       {
         kladr_id: "6300000700000",
       },
-      this.instance,
+      instance,
     );
 
     expect(

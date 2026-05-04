@@ -3,28 +3,29 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("After selecting", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "NAME",
       enrichmentEnabled: false,
     });
 
-    helpers.returnPoorStatus(this.server);
+    helpers.returnPoorStatus(server);
   });
 
   afterEach(function () {
-    this.server.restore();
-    this.instance.dispose();
-    this.input.remove();
+    server.restore();
+    instance.dispose();
+    input.remove();
   });
 
   it("Should hide dropdown if received suggestions contains only one suggestion equal to current", function () {
@@ -36,20 +37,20 @@ describe("After selecting", function () {
     ];
 
     // show list
-    this.input.value = "S";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "S";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    spyOn(this.instance, "hide");
+    spyOn(instance, "hide");
 
     // select suggestion from list
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // list is waiting for being updated
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
-    expect(this.instance.hide).toHaveBeenCalled();
+    expect(instance.hide).toHaveBeenCalled();
   });
 
   it("Should hide dropdown if selected NAME suggestion with all fields filled", function () {
@@ -65,18 +66,18 @@ describe("After selecting", function () {
       },
     ];
 
-    this.input.value = "S";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "S";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    spyOn(this.instance, "getSuggestions");
-    spyOn(this.instance, "hide");
+    spyOn(instance, "getSuggestions");
+    spyOn(instance, "hide");
 
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
-    expect(this.instance.getSuggestions).not.toHaveBeenCalled();
-    expect(this.instance.hide).toHaveBeenCalled();
+    expect(instance.getSuggestions).not.toHaveBeenCalled();
+    expect(instance.hide).toHaveBeenCalled();
   });
 
   it("Should hide dropdown if selected NAME suggestion with name and surname filled for IOF", function () {
@@ -92,18 +93,18 @@ describe("After selecting", function () {
       },
     ];
 
-    this.input.value = "Н";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "Н";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    spyOn(this.instance, "getSuggestions");
-    spyOn(this.instance, "hide");
+    spyOn(instance, "getSuggestions");
+    spyOn(instance, "hide");
 
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
-    expect(this.instance.getSuggestions).not.toHaveBeenCalled();
-    expect(this.instance.hide).toHaveBeenCalled();
+    expect(instance.getSuggestions).not.toHaveBeenCalled();
+    expect(instance.hide).toHaveBeenCalled();
   });
 
   it("Should hide dropdown if selected ADDRESS suggestion with `house` field filled", function () {
@@ -122,24 +123,24 @@ describe("After selecting", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
     });
-    helpers.returnPoorStatus(this.server);
+    helpers.returnPoorStatus(server);
 
-    this.input.value = "Р";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "Р";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    spyOn(this.instance, "getSuggestions");
-    spyOn(this.instance, "hide");
+    spyOn(instance, "getSuggestions");
+    spyOn(instance, "hide");
 
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
-    expect(this.instance.getSuggestions).not.toHaveBeenCalled();
-    expect(this.instance.hide).toHaveBeenCalled();
+    expect(instance.getSuggestions).not.toHaveBeenCalled();
+    expect(instance.hide).toHaveBeenCalled();
   });
 
   it("Should do nothing if select same suggestion twice", function () {
@@ -153,18 +154,18 @@ describe("After selecting", function () {
 
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
+    instance.setOptions(options);
 
     // show list
-    this.input.value = "S";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor([suggestion]));
+    input.value = "S";
+    instance.onValueChange();
+    server.respond(helpers.responseFor([suggestion]));
 
-    this.instance.setSuggestion(suggestion);
+    instance.setSuggestion(suggestion);
 
     // select suggestion from list
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -172,19 +173,19 @@ describe("After selecting", function () {
   it("Should show hint if no suggestions received", function () {
     const suggestions = [];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
     });
-    helpers.returnPoorStatus(this.server);
-    spyOn(this.instance, "hide");
+    helpers.returnPoorStatus(server);
+    spyOn(instance, "hide");
 
-    this.input.value = "Р";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "Р";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    const hints = this.instance.container.querySelectorAll(".suggestions-hint");
+    const hints = instance.container.querySelectorAll(".suggestions-hint");
     expect(hints.length).toEqual(1);
-    expect(this.instance.hide).not.toHaveBeenCalled();
+    expect(instance.hide).not.toHaveBeenCalled();
   });
 });

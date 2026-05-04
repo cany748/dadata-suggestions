@@ -3,39 +3,40 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Text to insert after selection", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "NAME",
       // disable mobile view features
       mobileWidth: Number.NaN,
     });
 
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("Should invoke formatSelected callback", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       formatSelected(suggestion) {
         return suggestion.data.customValue;
       },
     });
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond(
+    input.value = "A";
+    instance.onValueChange();
+    server.respond(
       helpers.responseFor([
         {
           value: "A",
@@ -45,13 +46,13 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
-    this.instance.select(0);
+    instance.select(0);
 
-    expect(this.input.value).toEqual("custom value ");
+    expect(input.value).toEqual("custom value ");
   });
 
   it("Should use default value if formatSelected returns null", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       formatSelected() {
         return null;
       },
@@ -59,9 +60,9 @@ describe("Text to insert after selection", function () {
         parts: ["NAME"],
       },
     });
-    this.input.value = "Al";
-    this.instance.onValueChange();
-    this.server.respond(
+    input.value = "Al";
+    instance.onValueChange();
+    server.respond(
       helpers.responseFor([
         {
           value: "Alex",
@@ -71,13 +72,13 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
-    this.instance.select(0);
+    instance.select(0);
 
-    expect(this.input.value).toEqual("Alex");
+    expect(input.value).toEqual("Alex");
   });
 
   it("Should not use default value if formatSelected returns empty string", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       formatSelected() {
         return "";
       },
@@ -85,9 +86,9 @@ describe("Text to insert after selection", function () {
         parts: ["NAME"],
       },
     });
-    this.input.value = "Al";
-    this.instance.onValueChange();
-    this.server.respond(
+    input.value = "Al";
+    instance.onValueChange();
+    server.respond(
       helpers.responseFor([
         {
           value: "Alex",
@@ -97,18 +98,18 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
-    this.instance.select(0);
+    instance.select(0);
 
-    expect(this.input.value).toEqual("");
+    expect(input.value).toEqual("");
   });
 
   it("Should invoke type-specified formatSelected method", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       type: "BANK",
     });
-    this.input.value = "Альфа";
-    this.instance.onValueChange();
-    this.server.respond(
+    input.value = "Альфа";
+    instance.onValueChange();
+    server.respond(
       helpers.responseFor([
         {
           value: "АЛЬФА-БАНК",
@@ -122,8 +123,8 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
-    this.instance.select(0);
-    this.server.respond(
+    instance.select(0);
+    server.respond(
       helpers.responseFor([
         {
           value: "АЛЬФА-БАНК",
@@ -138,11 +139,11 @@ describe("Text to insert after selection", function () {
       ]),
     );
 
-    expect(this.input.value).toEqual('АО "АЛЬФА-БАНК"');
+    expect(input.value).toEqual('АО "АЛЬФА-БАНК"');
   });
 
   it("Should apply restriction to enriched suggestion", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
       constraints: {
@@ -152,14 +153,14 @@ describe("Text to insert after selection", function () {
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "Турист";
-    this.instance.onValueChange();
+    input.value = "Турист";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(
+    server.respond(
       helpers.responseFor([
         {
           unrestricted_value: "г Москва, ул Туристская",
@@ -191,10 +192,10 @@ describe("Text to insert after selection", function () {
     );
 
     // Selecting causes enrichment
-    this.instance.select(0);
+    instance.select(0);
 
     // Respond with suggestions without restriction
-    this.server.respond(
+    server.respond(
       helpers.responseFor([
         {
           unrestricted_value: "г Москва, ул Туристская",
@@ -226,7 +227,7 @@ describe("Text to insert after selection", function () {
     );
 
     // Value must be restricted by plugin
-    expect(this.input.value).toEqual("ул Туристская ");
+    expect(input.value).toEqual("ул Туристская ");
   });
 
   it("Should show only city if region equals to city", function () {
@@ -251,7 +252,7 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
       restrict_value: true,
@@ -259,21 +260,21 @@ describe("Text to insert after selection", function () {
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "г Мос";
-    this.instance.onValueChange();
+    input.value = "г Мос";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor(suggestions));
+    instance.select(0);
+    server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(this.input.value).toEqual("г Москва");
+    expect(input.value).toEqual("г Москва");
   });
 
   it("Should not include city district in constrained value (district from OKATO)", function () {
@@ -305,7 +306,7 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
       constraints: {
@@ -315,21 +316,21 @@ describe("Text to insert after selection", function () {
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "Москва Суздальская";
-    this.instance.onValueChange();
+    input.value = "Москва Суздальская";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor(suggestions));
+    instance.select(0);
+    server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(this.input.value).toEqual("ул Суздальская ");
+    expect(input.value).toEqual("ул Суздальская ");
   });
 
   it("Should not include city district in constrained value (district from FIAS)", function () {
@@ -367,7 +368,7 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
       constraints: {
@@ -380,21 +381,21 @@ describe("Text to insert after selection", function () {
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "Сочи Лазурная";
-    this.instance.onValueChange();
+    input.value = "Сочи Лазурная";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor(suggestions));
+    instance.select(0);
+    server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(this.input.value).toEqual("ул Лазурная ");
+    expect(input.value).toEqual("ул Лазурная ");
   });
 
   it("Should not include city district in bounded value (district from OKATO)", function () {
@@ -426,28 +427,28 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
       bounds: "city-street",
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "Москва Суздальская";
-    this.instance.onValueChange();
+    input.value = "Москва Суздальская";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor(suggestions));
+    instance.select(0);
+    server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(this.input.value).toEqual("г Москва, ул Суздальская");
+    expect(input.value).toEqual("г Москва, ул Суздальская");
   });
 
   it("Should not include city district in bounded value (district from FIAS)", function () {
@@ -485,28 +486,28 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
       bounds: "city-street",
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "Сочи Лазурная";
-    this.instance.onValueChange();
+    input.value = "Сочи Лазурная";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor(suggestions));
+    instance.select(0);
+    server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(this.input.value).toEqual("г Сочи, ул Лазурная");
+    expect(input.value).toEqual("г Сочи, ул Лазурная");
   });
 
   it("Should not include city district in bounded city-settlement parent (district from OKATO)", function () {
@@ -564,7 +565,7 @@ describe("Text to insert after selection", function () {
       mobileWidth: Number.NaN,
     });
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
       bounds: "street",
@@ -572,19 +573,19 @@ describe("Text to insert after selection", function () {
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
     parentInput.value = "Ново";
-    this.input.value = "Вави";
-    this.instance.onValueChange();
+    input.value = "Вави";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor(suggestions));
+    instance.select(0);
+    server.respond(helpers.responseFor(suggestions));
 
     expect(parentInput.value).toEqual("г Новосибирск");
 
@@ -648,7 +649,7 @@ describe("Text to insert after selection", function () {
       mobileWidth: Number.NaN,
     });
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
       bounds: "street",
@@ -656,19 +657,19 @@ describe("Text to insert after selection", function () {
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
     parentInput.value = "Сочи";
-    this.input.value = "Авиа";
-    this.instance.onValueChange();
+    input.value = "Авиа";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor(suggestions));
+    instance.select(0);
+    server.respond(helpers.responseFor(suggestions));
 
     expect(parentInput.value).toEqual("г Сочи");
 
@@ -728,7 +729,7 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       constraints: {
         locations: {
@@ -740,20 +741,20 @@ describe("Text to insert after selection", function () {
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "белебей вторая";
-    this.instance.onValueChange();
+    input.value = "белебей вторая";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor([suggestions[0]]));
+    instance.select(0);
+    server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(this.input.value).toEqual("р-н Девон, ул Вторая ");
+    expect(input.value).toEqual("р-н Девон, ул Вторая ");
   });
 
   it("Should include city district in bounded value for streets with same names", function () {
@@ -808,26 +809,26 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       bounds: "city-street",
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "белебей вторая";
-    this.instance.onValueChange();
+    input.value = "белебей вторая";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor([suggestions[0]]));
+    instance.select(0);
+    server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(this.input.value).toEqual("г Белебей, р-н Девон, ул Вторая");
+    expect(input.value).toEqual("г Белебей, р-н Девон, ул Вторая");
   });
 
   it("Should include city district in unrestricted value for streets with same names", function () {
@@ -857,25 +858,25 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "белебей вторая";
-    this.instance.onValueChange();
+    input.value = "белебей вторая";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor([suggestions[0]]));
+    instance.select(0);
+    server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(this.input.value).toEqual("респ Башкортостан, Белебеевский р-н, г Белебей, р-н Девон, ул Вторая ");
+    expect(input.value).toEqual("респ Башкортостан, Белебеевский р-н, г Белебей, р-н Девон, ул Вторая ");
   });
 
   it("Should NOT include city district in constrained value for streets with same names IF unique street is selected", function () {
@@ -930,7 +931,7 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       constraints: {
         locations: {
@@ -942,20 +943,20 @@ describe("Text to insert after selection", function () {
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "белебей вторая";
-    this.instance.onValueChange();
+    input.value = "белебей вторая";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor([suggestions[0]]));
+    instance.select(0);
+    server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(this.input.value).toEqual("ул Вторая ");
+    expect(input.value).toEqual("ул Вторая ");
   });
 
   it("Should NOT include city district in bounded value for streets with same names IF unique street is selected", function () {
@@ -1010,26 +1011,26 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       bounds: "city-street",
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "белебей вторая";
-    this.instance.onValueChange();
+    input.value = "белебей вторая";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor([suggestions[0]]));
+    instance.select(0);
+    server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(this.input.value).toEqual("г Белебей, ул Вторая");
+    expect(input.value).toEqual("г Белебей, ул Вторая");
   });
 
   it("Should NOT include city district in unrestricted value for streets with same names IF unique street is selected", function () {
@@ -1060,25 +1061,25 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "белебей вторая";
-    this.instance.onValueChange();
+    input.value = "белебей вторая";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor([suggestions[0]]));
+    instance.select(0);
+    server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(this.input.value).toEqual("респ Башкортостан, г Белебей, пер Тукаевский 2-й ");
+    expect(input.value).toEqual("респ Башкортостан, г Белебей, пер Тукаевский 2-й ");
   });
 
   it("Should include city district in single input", function () {
@@ -1099,25 +1100,25 @@ describe("Text to insert after selection", function () {
       },
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       type: "ADDRESS",
       bounds: "city_district",
     });
 
     // Setting type will request for status
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "адлер";
-    this.instance.onValueChange();
+    input.value = "адлер";
+    instance.onValueChange();
 
     // Respond with suggestions with restricted values
-    this.server.respond(helpers.responseFor(suggestions));
+    server.respond(helpers.responseFor(suggestions));
 
     // Selecting causes enrichment
-    this.instance.select(0);
-    this.server.respond(helpers.responseFor([suggestions[0]]));
+    instance.select(0);
+    server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(this.input.value).toEqual("Адлерский р-н");
+    expect(input.value).toEqual("Адлерский р-н");
   });
 });

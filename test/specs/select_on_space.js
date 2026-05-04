@@ -3,29 +3,30 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Select on Space", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "NAME",
       deferRequestBy: 0,
       triggerSelectOnSpace: true,
     });
 
-    helpers.returnGoodStatus(this.server);
+    helpers.returnGoodStatus(server);
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("Should trigger when suggestion is selected", function () {
@@ -35,15 +36,15 @@ describe("Select on Space", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
+    instance.setOptions(options);
 
-    this.input.value = "Jam";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "Jam";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    this.instance.selectedIndex = 0;
+    instance.selectedIndex = 0;
 
-    helpers.keydown(this.input, 32);
+    helpers.keydown(input, 32);
 
     expect(options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), true);
@@ -56,14 +57,14 @@ describe("Select on Space", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "Jamaica";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "Jamaica";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    helpers.keydown(this.input, 32); // code of space
+    helpers.keydown(input, 32); // code of space
 
     expect(options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), true);
@@ -77,14 +78,14 @@ describe("Select on Space", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
+    instance.setOptions(options);
 
-    this.input.value = "Jam";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "Jam";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    this.instance.selectedIndex = 0;
-    helpers.keydown(this.input, 32); // code of space
+    instance.selectedIndex = 0;
+    helpers.keydown(input, 32); // code of space
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -103,16 +104,16 @@ describe("Select on Space", function () {
     const options = { onSelect: () => {} };
 
     spyOn(options, "onSelect");
-    this.instance.setOptions(options);
+    instance.setOptions(options);
 
-    this.input.value = "name";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "name";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    this.instance.selectedIndex = 0;
-    helpers.keydown(this.input, 32);
+    instance.selectedIndex = 0;
+    helpers.keydown(input, 32);
 
     expect(options.onSelect.calls.count()).toEqual(1);
-    expect(this.input.value).toEqual("name ");
+    expect(input.value).toEqual("name ");
   });
 });

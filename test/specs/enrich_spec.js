@@ -3,6 +3,7 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Enrich", function () {
+  let input, instance, server;
   const serviceUrl = "some/url";
   const fixtures = {
     poorName: [
@@ -75,103 +76,103 @@ describe("Enrich", function () {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "ADDRESS",
       token: "123",
       geoLocation: false,
     });
 
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("Should NOT enrich a suggestion for names", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       type: "NAME",
     });
 
     // select address
-    this.input.value = "Р";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.poorName));
+    input.value = "Р";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.poorName));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // request for enriched suggestion not sent
-    expect(this.server.requests.length).toEqual(0);
+    expect(server.requests.length).toEqual(0);
   });
 
   it("Should enrich a suggestion for parties", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       type: "PARTY",
     });
 
     // select address
-    this.input.value = "Р";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.poorParty));
+    input.value = "Р";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.poorParty));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // request for enriched suggestion not sent
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].requestBody).toContain('"count":1');
-    expect(this.server.requests[0].requestBody).toContain(`"query":"${fixtures.poorParty[0].data.hid}"`);
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].requestBody).toContain('"count":1');
+    expect(server.requests[0].requestBody).toContain(`"query":"${fixtures.poorParty[0].data.hid}"`);
   });
 
   it("Should enrich a suggestion for banks", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       type: "BANK",
     });
 
     // select bank
-    this.input.value = "а";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.poorBank));
+    input.value = "а";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.poorBank));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // request for enriched suggestion not sent
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].requestBody).toContain('"count":1');
-    expect(this.server.requests[0].requestBody).toContain(`"query":"${fixtures.poorBank[0].data.bic}"`);
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].requestBody).toContain('"count":1');
+    expect(server.requests[0].requestBody).toContain(`"query":"${fixtures.poorBank[0].data.bic}"`);
   });
 
   it("Should enrich address when selected", function () {
     // select address
-    this.input.value = "М";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.poorAddress));
+    input.value = "М";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.poorAddress));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // request for enriched suggestion
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].requestBody).toContain('"count":1');
-    expect(this.server.requests[0].requestBody).toContain(`"query":"${fixtures.poorAddress[0].value}"`);
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].requestBody).toContain('"count":1');
+    expect(server.requests[0].requestBody).toContain(`"query":"${fixtures.poorAddress[0].value}"`);
   });
 
   it("Should send unrestricted_value for enrichment", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           region_type: "г",
@@ -183,22 +184,22 @@ describe("Enrich", function () {
     });
 
     // select address
-    this.input.value = "Сол";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.poorAddressRestricted));
+    input.value = "Сол";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.poorAddressRestricted));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // request for enriched suggestion
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].requestBody).toContain('"count":1');
-    expect(this.server.requests[0].requestBody).toContain(`"query":"${fixtures.poorAddressRestricted[0].unrestricted_value}"`);
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].requestBody).toContain('"count":1');
+    expect(server.requests[0].requestBody).toContain(`"query":"${fixtures.poorAddressRestricted[0].unrestricted_value}"`);
   });
 
   it("Should not send constraints and boost parameters for enrichment", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           region_type: "г",
@@ -210,69 +211,69 @@ describe("Enrich", function () {
     });
 
     // select address
-    this.input.value = "Сол";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.poorAddressRestricted));
+    input.value = "Сол";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.poorAddressRestricted));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // request for enriched suggestion
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].requestBody).not.toContain('"locations"');
-    expect(this.server.requests[0].requestBody).not.toContain('"locations_boost"');
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].requestBody).not.toContain('"locations"');
+    expect(server.requests[0].requestBody).not.toContain('"locations_boost"');
   });
 
   it("Should not enrich a suggestion when selected by SPACE", function () {
     // select address
-    this.input.value = "Р";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.poor));
+    input.value = "Р";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.poor));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.keydown(this.input, 32); // code of Space
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.keydown(input, 32); // code of Space
 
     // request for enriched suggestion not sent
-    expect(this.server.requests.length).toEqual(0);
+    expect(server.requests.length).toEqual(0);
   });
 
   it("Should ignore server `enrich:false` status", function () {
     Suggestions.resetTokens();
-    this.instance.setOptions({
+    instance.setOptions({
       token: "456",
     });
-    helpers.returnStatus(this.server, {
+    helpers.returnStatus(server, {
       search: true,
       enrich: false,
     });
-    this.server.requests.length = 0;
+    server.requests.length = 0;
 
     // select address
-    this.input.value = "М";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.poorAddress));
+    input.value = "М";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.poorAddress));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // request enriched suggestion is sent
-    expect(this.server.requests.length).toEqual(1);
+    expect(server.requests.length).toEqual(1);
   });
 
   it("Should NOT enrich a suggestion with specified qc", function () {
     // select address
-    this.input.value = "М";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(fixtures.enriched));
+    input.value = "М";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(fixtures.enriched));
 
-    this.server.requests.length = 0;
-    this.instance.selectedIndex = 0;
-    helpers.hitEnter(this.input);
+    server.requests.length = 0;
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
 
     // request for enriched suggestion not sent
-    expect(this.server.requests.length).toEqual(0);
+    expect(server.requests.length).toEqual(0);
   });
 });

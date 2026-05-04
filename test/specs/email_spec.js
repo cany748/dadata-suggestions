@@ -3,40 +3,41 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Email", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "EMAIL",
       // disable mobile view features
       mobileWidth: Number.NaN,
     });
 
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("Should not request until @ typed", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       suggest_local: false,
     });
 
-    this.input.value = "jam";
-    this.instance.onValueChange();
+    input.value = "jam";
+    instance.onValueChange();
 
-    expect(this.server.requests.length).toEqual(0);
+    expect(server.requests.length).toEqual(0);
   });
 });

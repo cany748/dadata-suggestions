@@ -3,6 +3,7 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Address constraints", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
   const fixtures = {
     fullyAddress: {
@@ -57,60 +58,60 @@ describe("Address constraints", function () {
   };
 
   beforeEach(function () {
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "ADDRESS",
       geoLocation: false,
       enrichmentEnabled: false,
     });
 
-    this.server.requests.length = 0;
+    server.requests.length = 0;
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("Should not have `locations` parameter in request by default", function () {
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests.length).toEqual(1);
-    expect(this.server.requests[0].requestBody).not.toContain("locations");
+    expect(server.requests.length).toEqual(1);
+    expect(server.requests[0].requestBody).not.toContain("locations");
   });
 
   it("Should not have `locations` parameter in request if empty constraints specified", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {},
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).not.toContain("locations");
+    expect(server.requests[0].requestBody).not.toContain("locations");
   });
 
   it("Should not have `locations` parameter in request if bad-formatted constraints specified", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         region: "Москва",
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).not.toContain("locations");
+    expect(server.requests[0].requestBody).not.toContain("locations");
   });
 
   it("Should have `locations` parameter in request if constraints specified as single object", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           region: "Москва",
@@ -118,14 +119,14 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"region":"Москва"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"region":"Москва"}]');
   });
 
   it("Should have `locations` parameter in request with only `kladr_id` if it is specified", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           country: "россия",
@@ -137,15 +138,15 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"kladr_id":"77"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"kladr_id":"77"}]');
   });
 
   // если в locations указан фиас параметр, то другие параметры не используются
   it("Should have `locations` parameter in request with only `region_fias_id` if it is specified", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           country: "россия",
@@ -157,15 +158,15 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"region_fias_id":"44"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"region_fias_id":"44"}]');
   });
 
   // если в locations указан фиас параметр, то другие параметры не используются, даже кладр
   it("Should have `locations` parameter in request with only `region_fias_id` if specified fias and kladr", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           country: "россия",
@@ -178,15 +179,15 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"region_fias_id":"44"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"region_fias_id":"44"}]');
   });
 
   // можно указать несколько фиас параметров
   it("Should have `locations` parameter in request with several fias params", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           country: "россия",
@@ -200,14 +201,14 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"region_fias_id":"44","area_fias_id":"55"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"region_fias_id":"44","area_fias_id":"55"}]');
   });
 
   it("Should have `locations` parameter in request with only acceptable fields", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           planet: "земля",
@@ -219,14 +220,14 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"country":"россия","region":"москва","city":"москва"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"country":"россия","region":"москва","city":"москва"}]');
   });
 
   it("Should have `locations` parameter in request if constraints specified as single object named `restrictions`", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         restrictions: {
           region: "Москва",
@@ -234,14 +235,14 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"region":"Москва"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"region":"Москва"}]');
   });
 
   it("Should have `locations` parameter in request if constraints specified as array of objects", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: [
         {
           locations: {
@@ -256,10 +257,10 @@ describe("Address constraints", function () {
       ],
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"region":"Москва"},{"kladr_id":"6500000000000"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"region":"Москва"},{"kladr_id":"6500000000000"}]');
   });
 
   it("Should have `locations` parameter in request if constraints and their locations specified as arrays", function () {
@@ -282,7 +283,7 @@ describe("Address constraints", function () {
       ],
     ];
 
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: [
         {
           label: "ЮФО",
@@ -295,14 +296,14 @@ describe("Address constraints", function () {
       ],
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain(`"locations":${JSON.stringify([...locations[0], ...locations[1]])}`);
+    expect(server.requests[0].requestBody).toContain(`"locations":${JSON.stringify([...locations[0], ...locations[1]])}`);
   });
 
   it("Should constrain by country", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           country: "Италия",
@@ -310,14 +311,14 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "А";
-    this.instance.onValueChange();
+    input.value = "А";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"country":"Италия"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"country":"Италия"}]');
   });
 
   it("Should constrain by country_iso_code", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           country_iso_code: "IT",
@@ -325,14 +326,14 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "А";
-    this.instance.onValueChange();
+    input.value = "А";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"country_iso_code":"IT"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"country_iso_code":"IT"}]');
   });
 
   it("Should constrain by region_iso_code", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations: {
           country_iso_code: "IT",
@@ -341,14 +342,14 @@ describe("Address constraints", function () {
       },
     });
 
-    this.input.value = "А";
-    this.instance.onValueChange();
+    input.value = "А";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"country_iso_code":"IT","region_iso_code":"IT-25"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"country_iso_code":"IT","region_iso_code":"IT-25"}]');
   });
 
   it("Should have `locations` parameter for parties", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       type: "PARTY",
       constraints: {
         locations: { kladr_id: "77" },
@@ -356,13 +357,13 @@ describe("Address constraints", function () {
       restrict_value: true,
     });
 
-    helpers.returnGoodStatus(this.server);
-    this.server.requests.length = 0;
+    helpers.returnGoodStatus(server);
+    server.requests.length = 0;
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain('"locations":[{"kladr_id":"77"}]');
+    expect(server.requests[0].requestBody).toContain('"locations":[{"kladr_id":"77"}]');
   });
 
   it("Should have `locations` parameter in request for x_type_full constraints", function () {
@@ -375,20 +376,20 @@ describe("Address constraints", function () {
       street_type_full: "street",
     };
 
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         locations,
       },
     });
 
-    this.input.value = "A";
-    this.instance.onValueChange();
+    input.value = "A";
+    instance.onValueChange();
 
-    expect(this.server.requests[0].requestBody).toContain(JSON.stringify(locations));
+    expect(server.requests[0].requestBody).toContain(JSON.stringify(locations));
   });
 
   it("Should set unrestricted suggestion value", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: {
         label: "обл Ростовская, г Ростов-на-Дону",
         locations: {
@@ -400,10 +401,10 @@ describe("Address constraints", function () {
     });
     const suggestions = [{ value: "ул Буквенная, д 20", data: null }];
 
-    this.input.value = "Буквенная 20";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
-    expect(this.instance.suggestions[0]).toEqual({
+    input.value = "Буквенная 20";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
+    expect(instance.suggestions[0]).toEqual({
       value: "ул Буквенная, д 20",
       unrestricted_value: "обл Ростовская, г Ростов-на-Дону, ул Буквенная, д 20",
       data: null,
@@ -411,7 +412,7 @@ describe("Address constraints", function () {
   });
 
   it("Should not set unrestricted suggestion value on multiple constraints", function () {
-    this.instance.setOptions({
+    instance.setOptions({
       constraints: [
         {
           label: "обл Ростовская, г Ростов-на-Дону",
@@ -430,10 +431,10 @@ describe("Address constraints", function () {
     });
     const suggestions = [{ value: "ул Буквенная, д 20", data: null }];
 
-    this.input.value = "Буквенная 20";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
-    expect(this.instance.suggestions[0]).toEqual({
+    input.value = "Буквенная 20";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
+    expect(instance.suggestions[0]).toEqual({
       value: "ул Буквенная, д 20",
       unrestricted_value: "ул Буквенная, д 20",
       data: null,
@@ -441,11 +442,12 @@ describe("Address constraints", function () {
   });
 
   describe("in cooperation with other control", function () {
+    let parentInput, parentInstance;
     beforeEach(function () {
-      this.parentInput = document.createElement("input");
-      document.body.append(this.parentInput);
+      parentInput = document.createElement("input");
+      document.body.append(parentInput);
 
-      this.parentInstance = new Suggestions(this.parentInput, {
+      parentInstance = new Suggestions(parentInput, {
         type: "ADDRESS",
         serviceUrl,
         geoLocation: false,
@@ -454,11 +456,11 @@ describe("Address constraints", function () {
     });
 
     afterEach(function () {
-      this.parentInput.remove();
+      parentInput.remove();
     });
 
     it("Should use parent data as a constraint in child", function () {
-      this.parentInstance.setSuggestion({
+      parentInstance.setSuggestion({
         value: "г. Санкт-Петербург",
         data: {
           region: "Санкт-Петербург",
@@ -467,31 +469,31 @@ describe("Address constraints", function () {
         },
       });
 
-      this.instance.setOptions({
-        constraints: this.parentInput,
+      instance.setOptions({
+        constraints: parentInput,
       });
 
-      this.input.value = "улица";
-      this.instance.onValueChange();
+      input.value = "улица";
+      instance.onValueChange();
 
-      expect(this.server.requests[0].requestBody).toContain('"locations":[{"kladr_id":"7800000000000"}]');
-      expect(this.server.requests[0].requestBody).toContain('"restrict_value":true');
+      expect(server.requests[0].requestBody).toContain('"locations":[{"kladr_id":"7800000000000"}]');
+      expect(server.requests[0].requestBody).toContain('"restrict_value":true');
     });
 
     it("Should fill empty parent control when suggestion is selected in child", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         bounds: "street-",
-        constraints: this.parentInput,
+        constraints: parentInput,
       });
 
-      this.input.value = "бара";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor([fixtures.fullyAddress]));
-      this.instance.selectedIndex = 0;
-      this.instance.select(0);
+      input.value = "бара";
+      instance.onValueChange();
+      server.respond(helpers.responseFor([fixtures.fullyAddress]));
+      instance.selectedIndex = 0;
+      instance.select(0);
 
-      expect(this.parentInput.value).toEqual("Тульская обл, Узловский р-н");
-      expect(this.parentInstance.selection.data).toEqual(
+      expect(parentInput.value).toEqual("Тульская обл, Узловский р-н");
+      expect(parentInstance.selection.data).toEqual(
         jasmine.objectContaining({
           region: "Тульская",
           area: "Узловский",
@@ -500,26 +502,26 @@ describe("Address constraints", function () {
     });
 
     it("Should fill non-empty parent control with region different from selected", function () {
-      this.parentInstance.setSuggestion({
+      parentInstance.setSuggestion({
         value: "Новосибирская обл",
         data: {
           region: "новосибирская",
         },
       });
 
-      this.instance.setOptions({
+      instance.setOptions({
         bounds: "street-",
-        constraints: this.parentInput,
+        constraints: parentInput,
       });
 
-      this.input.value = "бара";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor([fixtures.fullyAddress]));
-      this.instance.selectedIndex = 0;
-      this.instance.select(0);
+      input.value = "бара";
+      instance.onValueChange();
+      server.respond(helpers.responseFor([fixtures.fullyAddress]));
+      instance.selectedIndex = 0;
+      instance.select(0);
 
-      expect(this.parentInput.value).toEqual("Тульская обл, Узловский р-н");
-      expect(this.parentInstance.selection.data).toEqual(
+      expect(parentInput.value).toEqual("Тульская обл, Узловский р-н");
+      expect(parentInstance.selection.data).toEqual(
         jasmine.objectContaining({
           region: "Тульская",
           area: "Узловский",
@@ -533,39 +535,39 @@ describe("Address constraints", function () {
         region: "Тульская",
         area: "Узловский",
       };
-      this.parentInstance.setSuggestion({
+      parentInstance.setSuggestion({
         value: "Тульская, Узловский",
         data: selectionData,
       });
 
-      this.instance.setOptions({
+      instance.setOptions({
         bounds: "street-",
-        constraints: this.parentInput,
+        constraints: parentInput,
       });
 
-      this.input.value = "бара";
-      this.instance.onValueChange();
-      this.server.respond(helpers.responseFor([fixtures.fullyAddress]));
-      this.instance.selectedIndex = 0;
-      this.instance.select(0);
+      input.value = "бара";
+      instance.onValueChange();
+      server.respond(helpers.responseFor([fixtures.fullyAddress]));
+      instance.selectedIndex = 0;
+      instance.select(0);
 
-      expect(this.parentInput.value).toEqual("Тульская, Узловский");
-      expect(this.parentInstance.selection.data).toEqual(selectionData);
+      expect(parentInput.value).toEqual("Тульская, Узловский");
+      expect(parentInstance.selection.data).toEqual(selectionData);
     });
 
     it("Should spread data to all parents", function () {
-      this.parentInput.value = "Тульская обл, Узловский р-н";
-      this.input.value = "г Узловая, поселок Брусянский, ул Строителей, д 1-бара";
+      parentInput.value = "Тульская обл, Узловский р-н";
+      input.value = "г Узловая, поселок Брусянский, ул Строителей, д 1-бара";
 
-      this.instance.setOptions({
+      instance.setOptions({
         bounds: "city-",
-        constraints: this.parentInput,
+        constraints: parentInput,
       });
 
-      this.instance.fixData();
-      this.server.respond(helpers.responseFor([fixtures.fullyAddress]));
+      instance.fixData();
+      server.respond(helpers.responseFor([fixtures.fullyAddress]));
 
-      expect(this.parentInstance.selection.data).toEqual(
+      expect(parentInstance.selection.data).toEqual(
         jasmine.objectContaining({
           region: "Тульская",
           region_type: "обл",
@@ -590,28 +592,28 @@ describe("Address constraints", function () {
         },
       ];
 
-      this.parentInput.value = "Санкт";
-      this.parentInstance.onValueChange();
-      this.server.respond(helpers.responseFor(suggestions));
-      this.parentInstance.selectedIndex = 0;
-      helpers.hitEnter(this.parentInput);
-      this.server.respond(helpers.responseFor(suggestions));
+      parentInput.value = "Санкт";
+      parentInstance.onValueChange();
+      server.respond(helpers.responseFor(suggestions));
+      parentInstance.selectedIndex = 0;
+      helpers.hitEnter(parentInput);
+      server.respond(helpers.responseFor(suggestions));
 
-      this.instance.setOptions({
+      instance.setOptions({
         bounds: "city",
-        constraints: this.parentInput,
+        constraints: parentInput,
       });
 
-      this.input.value = "кол";
-      this.instance.onValueChange();
-      const body = JSON.parse(this.server.lastRequest.requestBody);
+      input.value = "кол";
+      instance.onValueChange();
+      const body = JSON.parse(server.lastRequest.requestBody);
       expect(body.locations[0].city_fias_id).toBe(undefined);
     });
   });
 
   describe("can restrict values", function () {
     it("one constraint (country_iso_code)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         constraints: {
           locations: {
             country_iso_code: "IT",
@@ -621,14 +623,14 @@ describe("Address constraints", function () {
       });
 
       expect(
-        this.instance.getSuggestionValue(fixtures.foreign, {
+        instance.getSuggestionValue(fixtures.foreign, {
           hasBeenEnriched: true,
         }),
       ).toEqual("Lombardy, г Милан");
     });
 
     it("one constraint (country)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         constraints: {
           locations: {
             country: "Италия",
@@ -638,14 +640,14 @@ describe("Address constraints", function () {
       });
 
       expect(
-        this.instance.getSuggestionValue(fixtures.foreign, {
+        instance.getSuggestionValue(fixtures.foreign, {
           hasBeenEnriched: true,
         }),
       ).toEqual("Lombardy, г Милан");
     });
 
     it("one constraint (region)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         constraints: {
           locations: {
             region: "тульская",
@@ -655,14 +657,14 @@ describe("Address constraints", function () {
       });
 
       expect(
-        this.instance.getSuggestionValue(fixtures.fullyAddress, {
+        instance.getSuggestionValue(fixtures.fullyAddress, {
           hasBeenEnriched: true,
         }),
       ).toEqual("Узловский р-н, г Узловая, поселок Брусянский, ул Строителей, д 1-бара");
     });
 
     it("one constraint (city)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         constraints: {
           locations: {
             city: "узловая",
@@ -672,14 +674,14 @@ describe("Address constraints", function () {
       });
 
       expect(
-        this.instance.getSuggestionValue(fixtures.fullyAddress, {
+        instance.getSuggestionValue(fixtures.fullyAddress, {
           hasBeenEnriched: true,
         }),
       ).toEqual("поселок Брусянский, ул Строителей, д 1-бара");
     });
 
     it("one constraint (street)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         constraints: {
           locations: {
             street: "строителей",
@@ -689,14 +691,14 @@ describe("Address constraints", function () {
       });
 
       expect(
-        this.instance.getSuggestionValue(fixtures.fullyAddress, {
+        instance.getSuggestionValue(fixtures.fullyAddress, {
           hasBeenEnriched: true,
         }),
       ).toEqual("д 1-бара");
     });
 
     it("one constraint (region by kladr_id)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         constraints: {
           locations: {
             // kladr of region
@@ -707,14 +709,14 @@ describe("Address constraints", function () {
       });
 
       expect(
-        this.instance.getSuggestionValue(fixtures.fullyAddress, {
+        instance.getSuggestionValue(fixtures.fullyAddress, {
           hasBeenEnriched: true,
         }),
       ).toEqual("Узловский р-н, г Узловая, поселок Брусянский, ул Строителей, д 1-бара");
     });
 
     it("one constraint (street by kladr_id)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         constraints: {
           locations: {
             // Kladr of street
@@ -725,14 +727,14 @@ describe("Address constraints", function () {
       });
 
       expect(
-        this.instance.getSuggestionValue(fixtures.fullyAddress, {
+        instance.getSuggestionValue(fixtures.fullyAddress, {
           hasBeenEnriched: true,
         }),
       ).toEqual("д 1-бара");
     });
 
     it("one constraint (region by region_fias_id)", function () {
-      this.instance.setOptions({
+      instance.setOptions({
         constraints: {
           label: "Краснодарский край",
           locations: {
@@ -771,7 +773,7 @@ describe("Address constraints", function () {
         value: "г Сочи",
       };
 
-      const value = this.instance.getSuggestionValue(suggestion, {
+      const value = instance.getSuggestionValue(suggestion, {
         hasBeenEnriched: true,
       });
       expect(value).toEqual("г Сочи");
@@ -779,7 +781,7 @@ describe("Address constraints", function () {
 
     describe("multiple constraints", function () {
       beforeEach(function () {
-        this.instance.setOptions({
+        instance.setOptions({
           constraints: [
             // Москва
             {
@@ -799,7 +801,7 @@ describe("Address constraints", function () {
 
       it("crop city if matches", function () {
         expect(
-          this.instance.getSuggestionValue(
+          instance.getSuggestionValue(
             {
               data: {
                 city: "Москва",
@@ -835,7 +837,7 @@ describe("Address constraints", function () {
 
       it("crop region if matches", function () {
         expect(
-          this.instance.getSuggestionValue(
+          instance.getSuggestionValue(
             {
               data: {
                 city: "Коломна",

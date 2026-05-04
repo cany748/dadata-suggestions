@@ -68,51 +68,6 @@ window.jasmine = {
   },
 };
 
-// Создаём поддержку для `this` контекста в beforeEach/afterEach/it
-let currentTestContext = null;
-
-// Переопределяем глобальные beforeEach и afterEach для поддержки this
-const originalBeforeEach = window.beforeEach;
-const originalAfterEach = window.afterEach;
-
-window.beforeEach = function (fn) {
-  originalBeforeEach(() => {
-    // Создаём новый контекст только для первого beforeEach в цепочке
-    if (currentTestContext === null) {
-      currentTestContext = {};
-    }
-    return fn.call(currentTestContext);
-  });
-};
-
-window.afterEach = function (fn) {
-  originalAfterEach(() => {
-    const context = currentTestContext;
-    return fn.call(context);
-  });
-};
-
-// Добавляем внутренний afterEach который сбросит контекст в самом конце
-originalAfterEach(() => {
-  // Этот hook выполнится последним, сбросим контекст
-  currentTestContext = null;
-});
-
-// Переопределяем it для передачи контекста
-const originalIt = window.it;
-window.it = function (name, fn) {
-  if (typeof fn === "function") {
-    return originalIt(name, function () {
-      // Убедимся, что контекст существует перед выполнением теста
-      if (currentTestContext === null) {
-        currentTestContext = {};
-      }
-      return fn.call(currentTestContext);
-    });
-  }
-  return originalIt(name, fn);
-};
-
 expect.extend({
   toContainText(received, expected) {
     const text = received.textContent;

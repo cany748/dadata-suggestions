@@ -3,33 +3,34 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("FixData", function () {
+  let input, instance, server;
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       type: "ADDRESS",
     });
 
-    helpers.returnGoodStatus(this.server);
+    helpers.returnGoodStatus(server);
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("should not clear value on fixData", function () {
     const value = "Санкт-Петербург, ул. Софийская, д.35, корп.4, кв.81";
-    this.input.value = value;
+    input.value = value;
 
-    this.instance.fixData();
-    this.server.respond(helpers.responseFor([]));
+    instance.fixData();
+    server.respond(helpers.responseFor([]));
 
-    expect(this.input.value).toEqual(value);
+    expect(input.value).toEqual(value);
   });
 });

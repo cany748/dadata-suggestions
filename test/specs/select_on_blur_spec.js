@@ -3,27 +3,28 @@ import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Select on blur", function () {
+  let input, instance, server;
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    this.server = fakeServer.create();
+    server = fakeServer.create();
 
-    this.input = document.createElement("input");
-    document.body.append(this.input);
-    this.instance = new Suggestions(this.input, {
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, {
       serviceUrl,
       type: "NAME",
     });
 
-    helpers.returnGoodStatus(this.server);
+    helpers.returnGoodStatus(server);
   });
 
   afterEach(function () {
-    this.instance.dispose();
-    this.input.remove();
-    this.server.restore();
+    instance.dispose();
+    input.remove();
+    server.restore();
   });
 
   it("Should trigger on full match", function () {
@@ -37,14 +38,14 @@ describe("Select on blur", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "Albania";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "Albania";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    helpers.fireBlur(this.input);
+    helpers.fireBlur(input);
 
     expect(options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[1]), false);
@@ -61,14 +62,14 @@ describe("Select on blur", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
+    instance.setOptions(options);
 
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    input.value = "A";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    this.instance.selectedIndex = 2;
-    helpers.fireBlur(this.input);
+    instance.selectedIndex = 2;
+    helpers.fireBlur(input);
 
     expect(options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[2]), true);
@@ -81,13 +82,13 @@ describe("Select on blur", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "Jam";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
-    this.input.blur();
+    input.value = "Jam";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
+    input.blur();
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -99,13 +100,13 @@ describe("Select on blur", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.instance.selectedIndex = -1;
+    instance.setOptions(options);
+    instance.selectedIndex = -1;
 
-    this.input.value = "Alg";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
-    this.input.blur();
+    input.value = "Alg";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
+    input.blur();
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -118,13 +119,13 @@ describe("Select on blur", function () {
     };
     spyOn(options, "onSelect");
 
-    this.instance.setOptions(options);
-    this.input.value = "A";
-    this.instance.onValueChange();
-    this.server.respond(helpers.responseFor(suggestions));
+    instance.setOptions(options);
+    input.value = "A";
+    instance.onValueChange();
+    server.respond(helpers.responseFor(suggestions));
 
-    this.instance.selectedIndex = 0;
-    helpers.fireBlur(this.input);
+    instance.selectedIndex = 0;
+    helpers.fireBlur(input);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
