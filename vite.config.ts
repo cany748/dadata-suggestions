@@ -3,13 +3,13 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { playwright } from "@vitest/browser-playwright";
-import dts from "vite-plugin-dts";
+import dts from "unplugin-dts/vite";
 
 export default defineConfig({
   build: {
     lib: { entry: "./src/main.ts", formats: ["es"], fileName: "dadata-suggestions" },
   },
-  plugins: [vue(), dts({ tsconfigPath: "./tsconfig.app.json", include: "./src/**/*" })],
+  plugins: [vue(), dts({ tsconfigPath: "./tsconfig.app.json", include: "./src/**/*", entryRoot: "./src" })],
   test: {
     browser: {
       enabled: true,
