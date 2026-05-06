@@ -759,6 +759,6 @@ export type Options<T extends keyof SuggestionMap = keyof SuggestionMap> = {
   hint?: boolean | string;
   addon?: string;
   onSelect?: (suggestion: Suggestion<SuggestionMap[T]>) => void | Promise<void>;
-  formatResul?: (value: string, currentValue: string, suggestion: Suggestion<SuggestionMap[T]>) => string;
+  formatResult?: (value: string, currentValue: string, suggestion: Suggestion<SuggestionMap[T]>) => string;
   onSelectNothing?: (query: string) => void;
 };
