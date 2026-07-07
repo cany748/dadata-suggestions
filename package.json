@@ -1,7 +1,7 @@
 {
   "name": "@cany748/dadata-suggestions",
   "type": "module",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "packageManager": "pnpm@11.10.0",
   "description": "DaData.ru suggestions dropdown plugin",
   "author": "Alexander <cany748@gmail.com>",
