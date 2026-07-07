@@ -2,7 +2,7 @@
   "name": "@cany748/dadata-suggestions",
   "type": "module",
   "version": "0.3.0",
-  "packageManager": "pnpm@10.33.3",
+  "packageManager": "pnpm@11.10.0",
   "description": "DaData.ru suggestions dropdown plugin",
   "author": "Alexander <cany748@gmail.com>",
   "license": "MIT",
@@ -38,19 +38,19 @@
     "format": "prettier --write src/"
   },
   "devDependencies": {
-    "@cany748/eslint-config": "^5.0.0",
-    "@types/node": "^24.10.1",
-    "@typescript-eslint/eslint-plugin": "^8.59.2",
-    "@vitejs/plugin-vue": "^6.0.6",
-    "@vitest/browser": "^4.1.5",
-    "@vitest/browser-playwright": "^4.1.5",
-    "@vitest/coverage-v8": "^4.1.5",
-    "@vue/test-utils": "^2.4.10",
-    "eslint-plugin-vue": "^10.9.1",
+    "@cany748/eslint-config": "^6.0.0",
+    "@types/node": "^26.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.63.0",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vitest/browser": "^4.1.10",
+    "@vitest/browser-playwright": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vue/test-utils": "^2.4.11",
+    "eslint-plugin-vue": "^10.9.2",
     "nise": "^6.1.5",
-    "unplugin-dts": "^1.0.0",
-    "vite": "^8.0.10",
-    "vitest": "^4.1.5",
-    "vue-tsc": "^3.2.8"
+    "unplugin-dts": "^1.0.3",
+    "vite": "^8.1.3",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.3.6"
   }
 }
