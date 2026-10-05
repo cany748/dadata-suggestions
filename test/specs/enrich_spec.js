@@ -1,4 +1,3 @@
-import { fakeServer } from "nise";
 import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
@@ -76,7 +75,7 @@ describe("Enrich", function () {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    server = fakeServer.create();
+    server = helpers.createServer();
 
     input = document.createElement("input");
     document.body.append(input);
@@ -307,7 +306,7 @@ describe("Enrichment flow", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
     onSelect = vi.fn();

@@ -88,122 +88,50 @@ export const DEFAULT_OPTIONS = {
 };
 
 const serviceMethods = {
-  suggest: {
-    defaultParams: {
-      type: "POST",
-      dataType: "json",
-      contentType: "application/json",
-    },
-    addTypeInUrl: true,
-  },
-  "iplocate/address": {
-    defaultParams: {
-      type: "GET",
-      dataType: "json",
-    },
-    addTypeInUrl: false,
-  },
-  status: {
-    defaultParams: {
-      type: "GET",
-      dataType: "json",
-    },
-    addTypeInUrl: true,
-  },
-  findById: {
-    defaultParams: {
-      type: "POST",
-      dataType: "json",
-      contentType: "application/json",
-    },
-    addTypeInUrl: true,
-  },
+  suggest: { httpMethod: "POST", addTypeInUrl: true },
+  "iplocate/address": { httpMethod: "GET", addTypeInUrl: false },
+  status: { httpMethod: "GET", addTypeInUrl: true },
+  findById: { httpMethod: "POST", addTypeInUrl: true },
 };
 
-class AjaxError extends Error {
-  xhr: XMLHttpRequest;
-  textStatus: string;
-  errorThrown: string;
+export class HttpError extends Error {
+  response: Response;
 
-  constructor(xhr: XMLHttpRequest, textStatus: string, errorThrown: string) {
-    super(textStatus);
-    this.xhr = xhr;
-    this.textStatus = textStatus;
-    this.errorThrown = errorThrown;
+  constructor(response: Response) {
+    super(`${response.status} ${response.statusText}`.trim());
+    this.name = "HttpError";
+    this.response = response;
   }
 }
+
+const isAbortError = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
 
 /**
- * XMLHttpRequest wrapper that returns a Promise with `abort` method
- * Compatible with nise fakeServer for testing
+ * fetch wrapper that returns a Promise with `abort` method
  */
-function ajax(options: any) {
-  const deferred = withResolvers<any>();
-  const xhr = new XMLHttpRequest();
+const fetchJson = (url: string, init: RequestInit, timeout: number) => {
+  const controller = new AbortController();
+  const timer =
+    timeout > 0 ? setTimeout(() => controller.abort(new DOMException("Request timed out", "TimeoutError")), timeout) : undefined;
 
-  const method = options.type || "GET";
-  const url = options.url;
-  const data = options.data;
-  const headers = options.headers || {};
-  const contentType = options.contentType;
-  const timeout = options.timeout || 0;
-
-  xhr.open(method, url, true);
-  xhr.timeout = timeout;
-
-  // Set headers
-  if (contentType) {
-    xhr.setRequestHeader("Content-Type", contentType);
-  }
-  for (const [key, value] of Object.entries(headers)) {
-    xhr.setRequestHeader(key, value as string);
-  }
-
-  // withCredentials
-  if (options.xhrFields && options.xhrFields.withCredentials !== undefined) {
-    xhr.withCredentials = options.xhrFields.withCredentials;
-  }
-
-  xhr.addEventListener("load", function () {
-    if (xhr.status >= 200 && xhr.status < 300) {
-      let response;
-      try {
-        response = JSON.parse(xhr.responseText);
-      } catch {
-        response = xhr.responseText;
+  const promise = fetch(url, { ...init, signal: controller.signal })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new HttpError(response);
       }
-      deferred.resolve(response);
-    } else {
-      deferred.reject(new AjaxError(xhr, xhr.statusText, xhr.statusText));
-    }
-  });
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+      return { data, response };
+    })
+    .finally(() => clearTimeout(timer));
 
-  xhr.addEventListener("error", function () {
-    deferred.reject(new AjaxError(xhr, "error", xhr.statusText));
-  });
-
-  xhr.addEventListener("timeout", function () {
-    deferred.reject(new AjaxError(xhr, "timeout", "timeout"));
-  });
-
-  xhr.addEventListener("abort", function () {
-    deferred.reject(new AjaxError(xhr, "abort", "abort"));
-  });
-
-  xhr.send(data || null);
-
-  // Add abort method to promise for compatibility
-  const result = deferred.promise as any;
-  result.abort = function () {
-    xhr.abort();
-  };
-  result.getResponseHeader = function (name: string) {
-    return xhr.getResponseHeader(name);
-  };
-  result.statusText = xhr.statusText;
-
-  return result;
-}
+  return Object.assign(promise, { abort: () => controller.abort() });
+};
 
 /**
  * Compares two suggestion objects
@@ -713,75 +641,44 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     return [parentValue, currentValue].filter((e) => !!e).join(" ");
   }
 
-  getAjaxParams(method: string, custom?: any) {
+  request(method: keyof typeof serviceMethods, params?: object) {
     const token = typeof this.options.token === "string" ? this.options.token.trim() : "";
     const partner = typeof this.options.partner === "string" ? this.options.partner.trim() : "";
-    let serviceUrl = this.options.serviceUrl;
-    const url = this.options.url;
-    const serviceMethod = serviceMethods[method as keyof typeof serviceMethods];
-    const params = extend(
-      {
-        timeout: this.options.timeout,
-      },
-      serviceMethod.defaultParams,
-    );
-    const headers = {};
+    const { httpMethod, addTypeInUrl } = serviceMethods[method];
+    let url = this.options.url;
 
-    if (url) {
-      serviceUrl = url;
-    } else {
-      if (!/\/$/.test(serviceUrl)) {
-        serviceUrl += "/";
+    if (!url) {
+      url = this.options.serviceUrl;
+      if (!/\/$/.test(url)) {
+        url += "/";
       }
-      serviceUrl += method;
-      if (serviceMethod.addTypeInUrl) {
-        serviceUrl += `/${this.type.urlSuffix}`;
+      url += method;
+      if (addTypeInUrl) {
+        url += `/${this.type.urlSuffix}`;
       }
     }
 
-    // for XMLHttpRequest put token in header
+    const headers: Record<string, string> = httpMethod === "POST" ? { "Content-Type": "application/json" } : {};
+    Object.assign(headers, this.options.headers);
     if (token) {
       headers.Authorization = `Token ${token}`;
     }
     if (partner) {
       headers["X-Partner"] = partner;
     }
-    if (!params.headers) {
-      params.headers = {};
-    }
-    if (!params.xhrFields) {
-      params.xhrFields = {};
-    }
-    extend(params.headers, this.options.headers, headers);
-    // server sets Access-Control-Allow-Origin: *
-    // which requires no credentials
-    params.xhrFields.withCredentials = false;
 
-    params.url = serviceUrl;
-
-    return extend(params, custom);
-  }
-
-  getFetchParams(method: string, body?: string) {
-    const options = {
-      credentials: "omit",
-      headers: { Authorization: `Token ${this.options.token}` },
-      timeout: this.options.timeout,
-    };
-
-    if (body) {
-      options.method = "POST";
-      options.body = body;
-    } else {
-      options.method = "GET";
-    }
-
-    let url = this.options.serviceUrl + method;
-    if (method !== "iplocate/address") {
-      url += `/${this.type.urlSuffix}`;
-    }
-
-    return { url, options };
+    return fetchJson(
+      url,
+      {
+        method: httpMethod,
+        headers,
+        body: params && serialize(params),
+        // server sets Access-Control-Allow-Origin: *
+        // which requires no credentials
+        credentials: "omit",
+      },
+      this.options.timeout,
+    );
   }
 
   isQueryRequestable(query) {
@@ -853,7 +750,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       resolver.reject();
     } else {
       that.doGetSuggestions(params, method).then(
-        (response) => {
+        ({ data: response }) => {
           // if response is correct and current value has not been changed
           if (that.processResponse(response) && query == that.currentValue) {
             // Cache results if cache is not disabled:
@@ -877,10 +774,10 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
             options.onSearchComplete.call(that.element, query, response?.suggestions);
           }
         },
-        ({ xhr: jqXHR, textStatus, errorThrown }: AjaxError) => {
+        (error) => {
           resolver.reject();
-          if (!noCallbacks && textStatus !== "abort") {
-            options.onSearchError.call(that.element, query, jqXHR, textStatus, errorThrown);
+          if (!noCallbacks && !isAbortError(error)) {
+            options.onSearchError.call(that.element, query, error);
           }
         },
       );
@@ -890,7 +787,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   doGetSuggestions(params: object, method: string) {
     const that = this;
-    const request = ajax(that.getAjaxParams(method, { data: serialize(params) }));
+    const request = that.request(method, params);
 
     that.abortRequest();
     that.currentRequest = request;
@@ -1116,7 +1013,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     let request = statusRequests[requestKey];
 
     if (!request) {
-      request = statusRequests[requestKey] = ajax(that.getAjaxParams("status"));
+      request = statusRequests[requestKey] = that.request("status");
     }
 
     type Status = {
@@ -1129,25 +1026,25 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       version: string;
     };
 
-    function triggerError(errorThrown) {
+    const triggerError = (error: unknown) => {
       // If unauthorized
       if (typeof that.options.onSearchError === "function") {
-        that.options.onSearchError.call(that.element, null, request, "error", errorThrown);
+        that.options.onSearchError.call(that.element, null, error);
       }
-    }
+    };
 
     request.then(
-      (status) => {
+      ({ data: status, response }) => {
         if (status?.search) {
-          const plan = request.getResponseHeader("X-Plan");
+          const plan = response.headers.get("X-Plan");
           status.plan = plan;
           extend(that.status, status);
         } else {
-          triggerError("Service Unavailable");
+          triggerError(new Error("Service Unavailable"));
         }
       },
-      (error: AjaxError) => {
-        triggerError(error.errorThrown);
+      (error) => {
+        triggerError(error);
       },
     );
   }
@@ -2249,11 +2146,11 @@ function checkLocation(this: Suggestions) {
     that.geoLocationValue = providedLocation;
   } else {
     if (!locationRequest) {
-      locationRequest = ajax(that.getAjaxParams("iplocate/address"));
+      locationRequest = that.request("iplocate/address");
     }
 
     locationRequest.then(
-      (resp) => {
+      ({ data: resp }) => {
         const locationData = resp && resp.location && resp.location.data;
         if (locationData && locationData.kladr_id) {
           detectedLocation = {

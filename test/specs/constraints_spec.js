@@ -1,4 +1,3 @@
-import { fakeServer } from "nise";
 import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
@@ -58,7 +57,7 @@ describe("Address constraints", function () {
   };
 
   beforeEach(function () {
-    server = fakeServer.create();
+    server = helpers.createServer();
 
     input = document.createElement("input");
     document.body.append(input);
@@ -901,7 +900,7 @@ describe("Parent and child controls", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     parentInput = createInput();
     childInput = createInput();
     onChildInvalidate = vi.fn();
@@ -998,7 +997,7 @@ describe("Constraints options", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
   });

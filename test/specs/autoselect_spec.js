@@ -1,4 +1,3 @@
-import { fakeServer } from "nise";
 import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
@@ -7,7 +6,7 @@ describe("Autoselect", function () {
   const serviceUrl = "/some/url";
 
   beforeEach(function () {
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
     instance = new Suggestions(input, {

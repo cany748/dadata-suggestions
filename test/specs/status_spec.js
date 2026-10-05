@@ -1,4 +1,4 @@
-import { fakeServer } from "nise";
+import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Status features", function () {
@@ -8,7 +8,7 @@ describe("Status features", function () {
 
   beforeEach(function () {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
 
     input = document.createElement("input");
     document.body.append(input);
@@ -62,7 +62,7 @@ describe("Status features", function () {
 
     server.respond([200, { "Content-type": "application/json" }, "null"]);
 
-    await expect.poll(() => onSearchError).toHaveBeenCalledWith(null, expect.anything(), "error", "Service Unavailable");
+    await expect.poll(() => onSearchError).toHaveBeenCalledWith(null, expect.objectContaining({ message: "Service Unavailable" }));
   });
 
   it("Should use url param (if it passed) instead of serviceUrl", function () {

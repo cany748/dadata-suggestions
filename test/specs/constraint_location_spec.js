@@ -1,10 +1,10 @@
-import { fakeServer } from "nise";
+import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Constraint Location", function () {
   let input, instance, server;
   beforeEach(function () {
-    server = fakeServer.create();
+    server = helpers.createServer();
 
     input = document.createElement("input");
     document.body.append(input);

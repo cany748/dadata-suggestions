@@ -1,4 +1,4 @@
-import { fakeServer } from "nise";
+import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
 describe("Geolocation", function () {
@@ -8,7 +8,7 @@ describe("Geolocation", function () {
   beforeEach(function () {
     Suggestions.resetLocation();
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
 
     input = document.createElement("input");
     document.body.append(input);
@@ -176,7 +176,7 @@ describe("Geolocation boost", () => {
   beforeEach(async () => {
     Suggestions.resetLocation();
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
     instance = new Suggestions(input, { serviceUrl, type: "ADDRESS" });

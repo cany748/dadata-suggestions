@@ -1,4 +1,3 @@
-import { fakeServer } from "nise";
 import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
@@ -9,7 +8,7 @@ describe("Select on Space", function () {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    server = fakeServer.create();
+    server = helpers.createServer();
 
     input = document.createElement("input");
     document.body.append(input);
@@ -153,7 +152,7 @@ describe("Select on Space with keyboard", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
   });

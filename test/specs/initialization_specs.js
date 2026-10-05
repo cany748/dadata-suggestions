@@ -1,4 +1,3 @@
-import { fakeServer } from "nise";
 import helpers from "../helpers";
 import { DEFAULT_OPTIONS, Suggestions } from "@/suggestions";
 
@@ -25,7 +24,7 @@ describe("Initialization", () => {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    server = fakeServer.create();
+    server = helpers.createServer();
   });
 
   afterEach(function () {

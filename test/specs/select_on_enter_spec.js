@@ -1,4 +1,3 @@
-import { fakeServer } from "nise";
 import helpers from "../helpers";
 import { Suggestions } from "@/suggestions";
 
@@ -250,7 +249,7 @@ describe("Select on Enter", function () {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    server = fakeServer.create();
+    server = helpers.createServer();
     server.respondWith("POST", /suggest/, function (xhr) {
       const request = JSON.parse(xhr.requestBody);
       const query = request && request.query;
@@ -934,7 +933,7 @@ describe("Select on Enter while typing", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
   });

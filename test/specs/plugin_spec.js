@@ -1,5 +1,3 @@
-import { fakeServer } from "nise";
-
 import helpers from "../helpers";
 import { DEFAULT_OPTIONS, Suggestions } from "@/suggestions";
 import { DATA_ATTR_KEY } from "@/constants";
@@ -11,7 +9,7 @@ describe("Base features", function () {
   beforeEach(function () {
     Suggestions.resetTokens();
 
-    server = fakeServer.create();
+    server = helpers.createServer();
 
     input = document.createElement("input");
     document.body.append(input);
@@ -370,6 +368,13 @@ describe("Base features", function () {
 
       expect(server.requests[0].requestHeaders["X-my-header"]).toEqual("blabla");
     });
+
+    it("Should send requests without credentials", () => {
+      input.value = "jam";
+      instance.onValueChange();
+
+      expect(server.requests[0].credentials).toEqual("omit");
+    });
   });
 });
 
@@ -404,7 +409,7 @@ describe("Typing", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
   });
@@ -551,7 +556,7 @@ describe("Mouse", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
   });
@@ -638,7 +643,7 @@ describe("Request errors", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
     onSearchError = vi.fn();
@@ -659,7 +664,7 @@ describe("Request errors", () => {
 
     await expect.poll(() => onSearchError.mock.calls.length).toBe(1);
     expect(onSearchError.mock.calls[0][0]).toEqual("A");
-    expect(onSearchError.mock.calls[0][2]).toEqual("error");
+    expect(onSearchError.mock.calls[0][1]).toBeInstanceOf(TypeError);
   });
   it("Should complete search without suggestions when response body is empty", async () => {
     const onSearchComplete = vi.fn();
@@ -671,19 +676,20 @@ describe("Request errors", () => {
     expect(instance.visible).toBe(false);
     expect(onSearchError).not.toHaveBeenCalled();
   });
-  it("Should report timeout to `onSearchError`", async () => {
+  it("Should abort request after `timeout` and report it to `onSearchError`", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    instance.setOptions({ timeout: 1234 });
     const request = search("A");
 
-    request.triggerTimeout();
+    vi.advanceTimersByTime(1233);
+    expect(request.aborted).toBe(false);
+    vi.advanceTimersByTime(1);
+    vi.useRealTimers();
 
+    expect(request.aborted).toBe(true);
     await expect.poll(() => onSearchError.mock.calls.length).toBe(1);
     expect(onSearchError.mock.calls[0][0]).toEqual("A");
-    expect(onSearchError.mock.calls[0][2]).toEqual("timeout");
-  });
-  it("Should pass request timeout to XHR", () => {
-    instance.setOptions({ timeout: 1234 });
-
-    expect(search("A").timeout).toEqual(1234);
+    expect(onSearchError.mock.calls[0][1].name).toEqual("TimeoutError");
   });
   it("Should send `X-Partner` header if `partner` option set", () => {
     instance.setOptions({ partner: " partner-id " });
@@ -713,7 +719,7 @@ describe("Public API", () => {
 
   beforeEach(() => {
     Suggestions.resetTokens();
-    server = fakeServer.create();
+    server = helpers.createServer();
     input = document.createElement("input");
     document.body.append(input);
   });

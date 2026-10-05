@@ -1,5 +1,5 @@
 import "./main.css";
 
-export { Suggestions } from "./suggestions";
+export { HttpError, Suggestions } from "./suggestions";
 export { DATA_ATTR_KEY } from "./constants";
 export * from "./types";
