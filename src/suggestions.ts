@@ -1285,7 +1285,9 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       return;
     }
 
-    if (this.options.triggerSelectOnBlur) {
+    // dropdown is disabled while selected suggestion is being enriched,
+    // selecting again would abort the enrichment
+    if (this.options.triggerSelectOnBlur && !this.dropdownDisabled) {
       this.selectCurrentValue({ noSpace: true })
         .catch(() => {})
         .finally(() => {

@@ -348,8 +348,8 @@ describe("Enrichment flow", () => {
     expect(suggestRequests()).toHaveLength(requestsCount + 1);
     expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ data: richMoscow.data }), expect.anything());
   });
-  // Bug: blur starts a second enrichment that aborts the first one, so `onSelect` gets the suggestion without enriched data
-  it.fails("Should keep enriched data when input loses focus while enrichment is in progress", async () => {
+
+  it("Should keep enriched data when input loses focus while enrichment is in progress", async () => {
     await search("мос", [poorMoscow, poorStreet]);
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
