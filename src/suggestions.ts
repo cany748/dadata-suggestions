@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import {
   buildCacheKey,
   delay,
@@ -31,20 +30,6 @@ const types = {
   EMAIL: EMAIL_TYPE,
   BANK: BANK_TYPE,
   FMS: FMS_TYPE,
-};
-
-const notificator = {
-  chains: {} as Record<string, Function[]>,
-
-  on(name: string, method: Function) {
-    this.get(name).push(method);
-    return this;
-  },
-
-  get(name: string) {
-    const chains = this.chains;
-    return chains[name] || (chains[name] = []);
-  },
 };
 
 export const DEFAULT_OPTIONS = {
@@ -376,13 +361,11 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   public badQueries: string[];
   public selectedIndex: number;
   public currentValue: string;
-  public intervalId: number;
   public cachedResponse: Record<string, any>;
   public enrichmentCache: Record<string, any>;
   public abortController: AbortController;
   public parentAbortController: AbortController | null;
   public fetchPhase: any;
-  public enrichPhase: any;
   public onChangeTimeout: number | null;
   public triggering: Record<string, any>;
   public wrapper: HTMLElement | null;
@@ -391,14 +374,11 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   public selection: any;
   public type: any;
   public status: Record<string, any>;
-  public uniqueId: string;
   public currentRequest: any;
   public geoLocation: any;
-  public geoLocationValue: any;
   public bounds: any;
   public constraints: any;
   public container: HTMLElement | null;
-  public cancelBlur: boolean;
   public cancelFocus: boolean;
   public visible: boolean;
   public dropdownDisabled: boolean;
@@ -411,13 +391,11 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     this.badQueries = [];
     this.selectedIndex = -1;
     this.currentValue = this.element.value;
-    this.intervalId = 0;
     this.cachedResponse = {};
     this.enrichmentCache = {};
     this.abortController = new AbortController();
     this.parentAbortController = null;
     this.fetchPhase = new Promise(() => {});
-    this.enrichPhase = new Promise(() => {});
     this.onChangeTimeout = null;
     this.triggering = {};
     this.wrapper = null;
@@ -428,7 +406,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     this.type = null;
     this.status = {};
     this.currentRequest = null;
-    this.cancelBlur = false;
     this.cancelFocus = false;
     this.visible = false;
     this.dropdownDisabled = false;
@@ -444,30 +421,24 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     this.element.style.boxSizing = "border-box";
 
     (this.element as any)[DATA_ATTR_KEY] = this;
-    this.uniqueId = generateId("i");
     this.createWrapper();
-    this.notify("initialize");
+    this.bindElementEvents();
+    this.createContainer();
+    this.createConstraints();
+    this.setupBounds();
     this.setOptions(undefined);
-    this.notify("ready");
+    this.showContainer();
   }
 
   dispose() {
     const that = this;
-    that.notify("dispose");
+    that.unbindElementEvents();
+    that.removeContainer();
+    that.unbindFromParent();
     delete (that.element as any)[DATA_ATTR_KEY];
     that.element.classList.remove("suggestions-input");
     that.removeWrapper();
     trigger(that.element, "suggestions-dispose");
-  }
-
-  notify(chainName) {
-    const that = this;
-
-    const args = Array.prototype.slice.call(arguments, 1);
-
-    return notificator.get(chainName).map(function (method) {
-      return method.apply(that, args);
-    });
   }
 
   createWrapper() {
@@ -507,7 +478,10 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       );
     }
 
-    this.notify("setOptions");
+    this.checkStatus();
+    checkLocation(this);
+    this.setupConstraints();
+    this.setBoundsOptions();
   }
 
   // Common public methods
@@ -529,7 +503,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     that.suggestions = [];
     that.element.value = "";
     trigger(that.element, "suggestions-clear");
-    that.notify("clear");
     that.trigger("InvalidateSelection", currentSelection);
   }
 
@@ -695,12 +668,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     const options = this.options;
     const params = typeof options.params === "function" ? options.params.call(this.element, query) : extend({}, options.params);
 
-    if (this.type.constructRequestParams) {
-      extend(params, this.type.constructRequestParams.call(this));
-    }
-    for (const hookParams of this.notify("requestParams")) {
-      extend(params, hookParams);
-    }
+    extend(params, constructParams(this), this.constructConstraintsParams(), this.constructBoundsParams());
     params[options.paramName] = query;
     if (!Number.isNaN(Number.parseFloat(options.count)) && Number.isFinite(options.count) && options.count > 0) {
       params.count = options.count;
@@ -791,13 +759,11 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     that.abortRequest();
     that.currentRequest = request;
-    that.notify("request");
 
     const onComplete = () => {
       if (that.currentRequest === request) {
         that.currentRequest = null;
       }
-      that.notify("request");
     };
     request.then(onComplete, onComplete);
 
@@ -905,7 +871,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   assignSuggestions(suggestions, query) {
     this.suggestions = suggestions;
-    this.notify("assignSuggestions");
+    this.suggest();
+    this.selectFoundSuggestion();
   }
 
   shouldRestrictValues() {
@@ -970,8 +937,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     // Set `currentValue` to make `processResponse` to consider enrichment response valid
     that.currentValue = query;
 
-    // prevent request abortion during onBlur
-    that.enrichPhase = that
+    that
       .getSuggestions(query, customParams, requestOptions)
       .finally(() => {
         that.enableDropdown();
@@ -1175,13 +1141,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   onElementBlur() {
-    // suggestion was clicked, blur should be ignored
-    // see container mousedown handler
-    if (this.cancelBlur) {
-      this.cancelBlur = false;
-      return;
-    }
-
     // dropdown is disabled while selected suggestion is being enriched,
     // selecting again would abort the enrichment
     if (this.options.triggerSelectOnBlur && !this.dropdownDisabled) {
@@ -1193,10 +1152,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
         });
     } else {
       this.hide();
-    }
-
-    if (this.fetchPhase.abort) {
-      this.fetchPhase.abort();
     }
   }
 
@@ -1329,7 +1284,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     this.selectedIndex = -1;
 
     this.update();
-    this.notify("valueChange");
   }
 
   completeOnFocus() {
@@ -1339,10 +1293,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
         this.setCursorAtEnd();
       }
     }
-  }
-
-  isElementDisabled() {
-    return Boolean(this.element.getAttribute("disabled") || this.element.getAttribute("readonly"));
   }
 
   isCursorAtEnd() {
@@ -1369,16 +1319,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     } catch {
       // eslint-disable-next-line no-self-assign
       element.value = element.value;
-    }
-  }
-
-  proceedQuery(query) {
-    const that = this;
-
-    if (query.length >= that.options.minChars) {
-      that.updateSuggestions(query);
-    } else {
-      that.hide();
     }
   }
 
@@ -1517,10 +1457,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     // Prevent recursive execution
     if (that.triggering.Select) return;
 
-    if (that.type.alwaysContinueSelecting) {
-      continueSelecting = true;
-    }
-
     if (assumeDataComplete) {
       continueSelecting = false;
     }
@@ -1609,10 +1545,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     if (this.container && parent) {
       parent.append(this.container);
     }
-  }
-
-  getContainer() {
-    return this.container;
   }
 
   removeContainer() {
@@ -1889,17 +1821,12 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   setupConstraints() {
     const that = this;
-    let constraints = that.options.constraints;
+    const constraints = that.options.constraints;
 
     if (!constraints) {
       that.unbindFromParent();
       that.constraints = {};
       return;
-    }
-
-    // Handle Cash/jQuery objects - extract the HTMLElement
-    if (constraints && typeof constraints === "object" && constraints[0] instanceof HTMLElement && typeof constraints.length === "number") {
-      constraints = constraints[0];
     }
 
     // Constraints can be: element, selector, or constraint object(s)
@@ -1922,30 +1849,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       for (const constraint of Array.isArray(constraints) ? constraints : [constraints]) {
         that.addConstraint(constraint);
       }
-    }
-  }
-
-  filteredLocation(data) {
-    const locationComponents = new Set();
-    const location = {};
-
-    if (this.type.dataComponents) {
-      for (const component of this.type.dataComponents) {
-        if (component.forLocations) locationComponents.push(component.id);
-      }
-    }
-
-    if (isPlainObject(data)) {
-      // Copy to location only allowed fields
-      for (const [key, value] of Object.entries(data)) {
-        if (value && locationComponents.has(key)) {
-          location[key] = value;
-        }
-      }
-    }
-
-    if (Object.keys(location).length > 0) {
-      return location.kladr_id ? { kladr_id: location.kladr_id } : location;
     }
   }
 
@@ -2115,10 +2018,6 @@ let locationRequest;
 let detectedLocation: { kladr_id: string } | null = null;
 const defaultGeoLocation = true;
 
-Suggestions.getGeoLocation = () => {
-  return this.geoLocation;
-};
-
 Suggestions.resetLocation = () => {
   locationRequest = null;
   detectedLocation = null;
@@ -2132,8 +2031,7 @@ Suggestions.resetTokens = () => {
   statusRequests = {};
 };
 
-function checkLocation(this: Suggestions) {
-  const that = this;
+const checkLocation = (that: Suggestions) => {
   const providedLocation = that.options.geoLocation;
 
   if (!that.type.geoEnabled || !providedLocation) {
@@ -2143,7 +2041,6 @@ function checkLocation(this: Suggestions) {
   that.geoLocation = detectedLocation;
   if (isPlainObject(providedLocation) || Array.isArray(providedLocation)) {
     that.geoLocation = providedLocation;
-    that.geoLocationValue = providedLocation;
   } else {
     if (!locationRequest) {
       locationRequest = that.request("iplocate/address");
@@ -2162,38 +2059,19 @@ function checkLocation(this: Suggestions) {
       () => {},
     );
   }
-}
+};
 
-function constructParams(this: Suggestions) {
+const constructParams = (that: Suggestions) => {
   const params = {};
 
-  if (this.geoLocation) {
-    const locationData = this.geoLocation;
+  if (that.geoLocation) {
+    const locationData = that.geoLocation;
     params.locations_boost = Array.isArray(locationData) ? locationData : [locationData];
   }
 
   return params;
-}
+};
 
 Suggestions.ConstraintLocation = ConstraintLocation;
-
-notificator
-  .on("assignSuggestions", Suggestions.prototype.suggest)
-  .on("assignSuggestions", Suggestions.prototype.selectFoundSuggestion)
-  .on("dispose", Suggestions.prototype.unbindElementEvents)
-  .on("dispose", Suggestions.prototype.removeContainer)
-  .on("dispose", Suggestions.prototype.unbindFromParent)
-  .on("initialize", Suggestions.prototype.bindElementEvents)
-  .on("initialize", Suggestions.prototype.createContainer)
-  .on("initialize", Suggestions.prototype.createConstraints)
-  .on("initialize", Suggestions.prototype.setupBounds)
-  .on("ready", Suggestions.prototype.showContainer)
-  .on("requestParams", constructParams)
-  .on("requestParams", Suggestions.prototype.constructConstraintsParams)
-  .on("requestParams", Suggestions.prototype.constructBoundsParams)
-  .on("setOptions", Suggestions.prototype.checkStatus)
-  .on("setOptions", checkLocation)
-  .on("setOptions", Suggestions.prototype.setupConstraints)
-  .on("setOptions", Suggestions.prototype.setBoundsOptions);
 
 export { Suggestions };

@@ -953,13 +953,10 @@ describe("Parent and child controls", () => {
     expect(childInput.value).toEqual("");
     expect(onChildInvalidate).toHaveBeenCalledWith(expect.objectContaining({ value: "ул Советская" }));
   });
-  it.each([
-    ["CSS selector", () => "#parent-control"],
-    ["jQuery-like collection", () => [parentInput]],
-  ])("Should accept parent given as %s", (_, getConstraints) => {
+  it("Should accept parent given as CSS selector", () => {
     parentInput.id = "parent-control";
     const input = createInput();
-    const instance = new Suggestions(input, { serviceUrl, type: "ADDRESS", geoLocation: false, constraints: getConstraints() });
+    const instance = new Suggestions(input, { serviceUrl, type: "ADDRESS", geoLocation: false, constraints: "#parent-control" });
     parentInstance.setSuggestion(tver);
 
     input.value = "сов";

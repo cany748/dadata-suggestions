@@ -727,8 +727,6 @@ export type SuggestionsType<T> = {
   /** Массив 'bound's можно установить как опцию `bounds`. Порядок важен. */
   dataComponents?: readonly DataComponents[];
   dataComponentsById?: Record<string, any>;
-  /** Запрещает скрывать выпадающий список после выбора */
-  alwaysContinueSelecting?: boolean;
   /** Определяет местоположения клиента, чтобы передать его всем запросам */
   geoEnabled?: boolean;
   /** Делает отправку дополнительного запроса при выборе подсказки */
