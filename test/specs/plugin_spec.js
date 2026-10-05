@@ -33,20 +33,22 @@ describe("Base features", function () {
   });
 
   describe("Misc", function () {
-    it("Should get current value", function () {
+    it("Should get current value", async () => {
       input.value = "Jam";
       instance.onValueChange();
 
       server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
+      await expect.poll(() => instance.visible).toBe(true);
 
       expect(instance.visible).toBe(true);
       expect(instance.currentValue).toEqual("Jam");
     });
 
-    it("Should convert suggestions format", function () {
+    it("Should convert suggestions format", async () => {
       input.value = "A";
       instance.onValueChange();
       server.respond(helpers.responseFor(["Alex", "Ammy", "Anny"]));
+      await expect.poll(() => instance.visible).toBe(true);
       expect(instance.suggestions[0]).toEqual(helpers.appendUnrestrictedValue({ value: "Alex", data: null }));
       expect(instance.suggestions[1]).toEqual(helpers.appendUnrestrictedValue({ value: "Ammy", data: null }));
       expect(instance.suggestions[2]).toEqual(helpers.appendUnrestrictedValue({ value: "Anny", data: null }));
@@ -67,14 +69,15 @@ describe("Base features", function () {
       }
     });
 
-    it("Should set width to be greater than zero", function () {
+    it("Should set width to be greater than zero", async () => {
       input.value = "Jam";
       instance.onValueChange();
       server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
+      await expect.poll(() => instance.visible).toBe(true);
       expect(instance.container.offsetWidth).toBeGreaterThan(0);
     });
 
-    it("Should call beforeRender and pass container element", function () {
+    it("Should call beforeRender and pass container element", async () => {
       const options = {
         beforeRender() {},
       };
@@ -84,18 +87,20 @@ describe("Base features", function () {
       input.value = "Jam";
       instance.onValueChange();
       server.respond(helpers.responseFor([{ value: "Jamaica", data: "B" }]));
+      await expect.poll(() => instance.visible).toBe(true);
 
       expect(options.beforeRender.calls.count()).toEqual(1);
       expect(options.beforeRender).toHaveBeenCalledWith(instance.container);
     });
 
-    it("Should prevent Ajax requests if previous query with matching root failed.", function () {
+    it("Should prevent Ajax requests if previous query with matching root failed.", async () => {
       instance.setOptions({ preventBadQueries: true });
       input.value = "Jam";
       instance.onValueChange();
 
       expect(server.requests.length).toEqual(1);
       server.respond(helpers.responseFor([]));
+      await expect.poll(() => instance.badQueries).toHaveLength(1);
 
       input.value = "Jama";
       instance.onValueChange();
@@ -110,7 +115,7 @@ describe("Base features", function () {
   });
 
   describe("onSelect callback", function () {
-    it("Verify onSelect callback (fully changed)", function () {
+    it("Verify onSelect callback (fully changed)", async () => {
       const suggestions = [{ value: "Abcdef", data: "B" }];
       const options = {
         onSelect() {},
@@ -121,13 +126,14 @@ describe("Base features", function () {
       input.value = "A";
       instance.onValueChange();
       server.respond(helpers.responseFor(suggestions));
-      instance.select(0);
+      await expect.poll(() => instance.visible).toBe(true);
+      await instance.select(0);
 
       expect(options.onSelect.calls.count()).toEqual(1);
       expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), true);
     });
 
-    it("Verify onSelect callback (just enriched)", function () {
+    it("Verify onSelect callback (just enriched)", async () => {
       const suggestions = [
         {
           value: "Abc",
@@ -147,7 +153,8 @@ describe("Base features", function () {
       input.value = "Abc";
       instance.onValueChange();
       server.respond(helpers.responseFor(suggestions));
-      instance.select(0);
+      await expect.poll(() => instance.visible).toBe(true);
+      await instance.select(0);
 
       expect(options.onSelect.calls.count()).toEqual(1);
       expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), false);
@@ -176,7 +183,7 @@ describe("Base features", function () {
       instance.onValueChange();
     });
 
-    it("invoked", function () {
+    it("invoked", async () => {
       const options = {
         onSuggestionsFetch() {},
       };
@@ -186,12 +193,13 @@ describe("Base features", function () {
       instance.setOptions(options);
 
       server.respond(helpers.responseFor(suggestions));
+      await expect.poll(() => instance.visible).toBe(true);
 
       expect(options.onSuggestionsFetch.calls.count()).toEqual(1);
       expect(options.onSuggestionsFetch).toHaveBeenCalledWith(suggestions);
     });
 
-    it("can modify argument", function () {
+    it("can modify argument", async () => {
       instance.setOptions({
         onSuggestionsFetch(suggestions) {
           // Move first option to the end
@@ -200,6 +208,7 @@ describe("Base features", function () {
       });
 
       server.respond(helpers.responseFor(suggestions));
+      await expect.poll(() => instance.visible).toBe(true);
 
       const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -210,7 +219,7 @@ describe("Base features", function () {
       expect(items[2]).toContainText(suggestions[0].value);
     });
 
-    it("can use returned array", function () {
+    it("can use returned array", async () => {
       instance.setOptions({
         onSuggestionsFetch(suggestions) {
           // Return new array
@@ -219,6 +228,7 @@ describe("Base features", function () {
       });
 
       server.respond(helpers.responseFor(suggestions));
+      await expect.poll(() => instance.visible).toBe(true);
 
       const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -231,10 +241,11 @@ describe("Base features", function () {
   });
 
   describe("Hint message", function () {
-    it("Should display default hint message above suggestions", function () {
+    it("Should display default hint message above suggestions", async () => {
       input.value = "jam";
       instance.onValueChange();
       server.respond(helpers.responseFor(["Jamaica"]));
+      await expect.poll(() => instance.visible).toBe(true);
 
       const hints = instance.container.querySelectorAll(".suggestions-hint");
 
@@ -242,7 +253,7 @@ describe("Base features", function () {
       expect(hints[0].textContent).toEqual(DEFAULT_OPTIONS.hint);
     });
 
-    it("Should display custom hint message above suggestions", function () {
+    it("Should display custom hint message above suggestions", async () => {
       const customHint = "This is custon hint";
       instance.setOptions({
         hint: customHint,
@@ -251,6 +262,7 @@ describe("Base features", function () {
       input.value = "jam";
       instance.onValueChange();
       server.respond(helpers.responseFor(["Jamaica"]));
+      await expect.poll(() => instance.visible).toBe(true);
 
       const hints = instance.container.querySelectorAll(".suggestions-hint");
 
@@ -258,7 +270,7 @@ describe("Base features", function () {
       expect(hints[0].textContent).toEqual(customHint);
     });
 
-    it("Should not display any hint message above suggestions", function () {
+    it("Should not display any hint message above suggestions", async () => {
       instance.setOptions({
         hint: false,
       });
@@ -266,13 +278,14 @@ describe("Base features", function () {
       input.value = "jam";
       instance.onValueChange();
       server.respond(helpers.responseFor(["Jamaica"]));
+      await expect.poll(() => instance.visible).toBe(true);
 
       const hints = instance.container.querySelectorAll(".suggestions-hint");
 
       expect(hints.length).toEqual(0);
     });
 
-    it("Should not display any hint message for narrow-screen (mobile) view", function () {
+    it("Should not display any hint message for narrow-screen (mobile) view", async () => {
       instance.setOptions({
         hint: false,
         mobileWidth: 20_000,
@@ -281,6 +294,7 @@ describe("Base features", function () {
       input.value = "jam";
       instance.onValueChange();
       server.respond(helpers.responseFor(["Jamaica"]));
+      await expect.poll(() => instance.visible).toBe(true);
 
       const hints = instance.container.querySelectorAll(".suggestions-hint");
 

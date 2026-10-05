@@ -11,9 +11,9 @@ import {
   serialize,
   trigger,
   trim,
+  withResolvers,
 } from "./utils";
 import { CLASSES, DATA_ATTR_KEY, KEYS } from "./constants";
-import { Deferred } from "./poly";
 
 import { ADDRESS_TYPE } from "./types/address";
 import { NAME_TYPE } from "./types/name";
@@ -120,12 +120,25 @@ const serviceMethods = {
   },
 };
 
+class AjaxError extends Error {
+  xhr: XMLHttpRequest;
+  textStatus: string;
+  errorThrown: string;
+
+  constructor(xhr: XMLHttpRequest, textStatus: string, errorThrown: string) {
+    super(textStatus);
+    this.xhr = xhr;
+    this.textStatus = textStatus;
+    this.errorThrown = errorThrown;
+  }
+}
+
 /**
- * XMLHttpRequest wrapper that returns a Deferred-like object
+ * XMLHttpRequest wrapper that returns a Promise with `abort` method
  * Compatible with nise fakeServer for testing
  */
 function ajax(options: any) {
-  const deferred = new Deferred();
+  const deferred = withResolvers<any>();
   const xhr = new XMLHttpRequest();
 
   const method = options.type || "GET";
@@ -159,28 +172,28 @@ function ajax(options: any) {
       } catch {
         response = xhr.responseText;
       }
-      deferred.resolve(response, xhr.statusText, xhr);
+      deferred.resolve(response);
     } else {
-      deferred.reject(xhr, xhr.statusText, xhr.statusText);
+      deferred.reject(new AjaxError(xhr, xhr.statusText, xhr.statusText));
     }
   });
 
   xhr.addEventListener("error", function () {
-    deferred.reject(xhr, "error", xhr.statusText);
+    deferred.reject(new AjaxError(xhr, "error", xhr.statusText));
   });
 
   xhr.addEventListener("timeout", function () {
-    deferred.reject(xhr, "timeout", "timeout");
+    deferred.reject(new AjaxError(xhr, "timeout", "timeout"));
   });
 
   xhr.addEventListener("abort", function () {
-    deferred.reject(xhr, "abort", "abort");
+    deferred.reject(new AjaxError(xhr, "abort", "abort"));
   });
 
   xhr.send(data || null);
 
-  // Add abort method to deferred for compatibility
-  const result = deferred as any;
+  // Add abort method to promise for compatibility
+  const result = deferred.promise as any;
   result.abort = function () {
     xhr.abort();
   };
@@ -439,7 +452,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   public cachedResponse: Record<string, any>;
   public enrichmentCache: Record<string, any>;
   public abortController: AbortController;
-  public inputPhase: any;
   public fetchPhase: any;
   public enrichPhase: any;
   public onChangeTimeout: number | null;
@@ -474,9 +486,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     this.cachedResponse = {};
     this.enrichmentCache = {};
     this.abortController = new AbortController();
-    this.inputPhase = new Deferred();
-    this.fetchPhase = new Deferred();
-    this.enrichPhase = new Deferred();
+    this.fetchPhase = new Promise(() => {});
+    this.enrichPhase = new Promise(() => {});
     this.onChangeTimeout = null;
     this.triggering = {};
     this.wrapper = null;
@@ -640,10 +651,10 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     const that = this;
     const fullQuery = that.extendedCurrentValue();
     const currentValue = that.element.value;
-    const resolver = new Deferred();
+    const resolver = withResolvers<any>();
 
-    resolver
-      .done(function (suggestion) {
+    resolver.promise.then(
+      (suggestion) => {
         that.selectSuggestion(suggestion, 0, currentValue, {
           hasBeenEnriched: true,
         });
@@ -651,11 +662,12 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
           that.element.value = currentValue;
         }
         trigger(that.element, "suggestions-fixdata", [suggestion]);
-      })
-      .fail(function () {
+      },
+      () => {
         that.selection = null;
         trigger(that.element, "suggestions-fixdata");
-      });
+      },
+    );
 
     if (that.isQueryRequestable(fullQuery)) {
       that.currentValue = fullQuery;
@@ -665,19 +677,21 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
           from_bound: null,
           to_bound: null,
         })
-        .done(function (suggestions) {
-          // data fetched
-          const suggestion = suggestions[0];
-          if (suggestion) {
-            resolver.resolve(suggestion);
-          } else {
+        .then(
+          (suggestions) => {
+            // data fetched
+            const suggestion = suggestions[0];
+            if (suggestion) {
+              resolver.resolve(suggestion);
+            } else {
+              resolver.reject();
+            }
+          },
+          () => {
+            // no data fetched
             resolver.reject();
-          }
-        })
-        .fail(function () {
-          // no data fetched
-          resolver.reject();
-        });
+          },
+        );
     } else {
       resolver.reject();
     }
@@ -800,9 +814,13 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   updateSuggestions(query) {
-    this.fetchPhase = this.getSuggestions(query).done((suggestions) => {
-      this.assignSuggestions(suggestions, query);
-    });
+    this.fetchPhase = this.getSuggestions(query);
+    this.fetchPhase.then(
+      (suggestions) => {
+        this.assignSuggestions(suggestions, query);
+      },
+      () => {},
+    );
   }
 
   /**
@@ -822,7 +840,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     const method = (requestOptions && requestOptions.method) || that.requestMode.method;
     const params = that.constructRequestParams(query, customParams);
     const cacheKey = buildCacheKey(params);
-    const resolver = new Deferred();
+    const resolver = withResolvers<any>();
 
     const response = that.cachedResponse[cacheKey];
     if (response && Array.isArray(response.suggestions)) {
@@ -832,9 +850,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     } else if (!noCallbacks && options.onSearchStart.call(that.element, params) === false) {
       resolver.reject();
     } else {
-      that
-        .doGetSuggestions(params, method)
-        .done(function (response) {
+      that.doGetSuggestions(params, method).then(
+        (response) => {
           // if response is correct and current value has not been changed
           if (that.processResponse(response) && query == that.currentValue) {
             // Cache results if cache is not disabled:
@@ -857,15 +874,16 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
           if (!noCallbacks) {
             options.onSearchComplete.call(that.element, query, response.suggestions);
           }
-        })
-        .fail(function (jqXHR, textStatus, errorThrown) {
+        },
+        ({ xhr: jqXHR, textStatus, errorThrown }: AjaxError) => {
           resolver.reject();
           if (!noCallbacks && textStatus !== "abort") {
             options.onSearchError.call(that.element, query, jqXHR, textStatus, errorThrown);
           }
-        });
+        },
+      );
     }
-    return resolver;
+    return resolver.promise;
   }
 
   doGetSuggestions(params: object, method: string) {
@@ -876,10 +894,13 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     that.currentRequest = request;
     that.notify("request");
 
-    request.always(function () {
-      that.currentRequest = null;
+    const onComplete = () => {
+      if (that.currentRequest === request) {
+        that.currentRequest = null;
+      }
       that.notify("request");
-    });
+    };
+    request.then(onComplete, onComplete);
 
     return request;
   }
@@ -1021,7 +1042,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   enrichSuggestion(this: Suggestions, suggestion, selectionOptions) {
     const that = this;
-    const resolver = new Deferred();
 
     if (
       !that.options.enrichmentEnabled ||
@@ -1029,14 +1049,15 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       !that.requestMode.enrichmentEnabled ||
       (selectionOptions && selectionOptions.dontEnrich)
     ) {
-      return resolver.resolve(suggestion);
+      return Promise.resolve([suggestion]);
     }
 
     // if current suggestion is already enriched, use it
     if (suggestion.data && suggestion.data.qc != null) {
-      return resolver.resolve(suggestion);
+      return Promise.resolve([suggestion]);
     }
 
+    const resolver = withResolvers<[any, boolean?]>();
     that.disableDropdown();
 
     const query = that.type.getEnrichmentQuery(suggestion);
@@ -1053,19 +1074,21 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     // prevent request abortion during onBlur
     that.enrichPhase = that
       .getSuggestions(query, customParams, requestOptions)
-      .always(function () {
+      .finally(() => {
         that.enableDropdown();
       })
-      .done(function (suggestions) {
-        const enrichedSuggestion = suggestions && suggestions[0];
+      .then(
+        (suggestions) => {
+          const enrichedSuggestion = suggestions && suggestions[0];
 
-        resolver.resolve(enrichedSuggestion || suggestion, !!enrichedSuggestion);
-      })
-      .fail(function () {
-        resolver.resolve(suggestion);
-      });
+          resolver.resolve([enrichedSuggestion || suggestion, !!enrichedSuggestion]);
+        },
+        () => {
+          resolver.resolve([suggestion]);
+        },
+      );
 
-    return resolver;
+    return resolver.promise;
   }
 
   /**
@@ -1111,8 +1134,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       }
     }
 
-    request
-      .done(function (status, textStatus, request) {
+    request.then(
+      (status) => {
         if (status.search) {
           const plan = request.getResponseHeader("X-Plan");
           status.plan = plan;
@@ -1120,10 +1143,11 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
         } else {
           triggerError("Service Unavailable");
         }
-      })
-      .fail(function () {
-        triggerError(request.statusText);
-      });
+      },
+      (error: AjaxError) => {
+        triggerError(error.errorThrown);
+      },
+    );
   }
 
   setupBounds(this: Suggestions) {
@@ -1263,10 +1287,12 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     }
 
     if (this.options.triggerSelectOnBlur) {
-      this.selectCurrentValue({ noSpace: true }).always(() => {
-        // For NAMEs selecting keeps suggestions list visible, so hide it
-        this.hide();
-      });
+      this.selectCurrentValue({ noSpace: true })
+        .catch(() => {})
+        .finally(() => {
+          // For NAMEs selecting keeps suggestions list visible, so hide it
+          this.hide();
+        });
     } else {
       this.hide();
     }
@@ -1322,7 +1348,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
       case KEYS.ENTER: {
         if (this.options.triggerSelectOnEnter) {
-          this.selectCurrentValue();
+          this.selectCurrentValue().catch(() => {});
         }
         break;
       }
@@ -1333,7 +1359,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
           this.selectCurrentValue({
             continueSelecting: true,
             dontEnrich: true,
-          }).fail(() => {
+          }).catch(() => {
             // If all data fetched but nothing selected
             this.currentValue += " ";
             this.element.value = this.currentValue;
@@ -1371,7 +1397,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     // Cancel pending change
     if (this.onChangeTimeout) clearTimeout(this.onChangeTimeout);
-    this.inputPhase.reject();
+    this.onChangeTimeout = null;
 
     if (this.currentValue !== this.element.value) {
       this.proceedChangedValue();
@@ -1382,18 +1408,14 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     // Cancel fetching, because it became obsolete
     this.abortRequest();
 
-    this.inputPhase = new Deferred();
-    this.inputPhase.done(() => {
-      this.onValueChange();
-    });
-
     if (this.options.deferRequestBy > 0) {
       // Defer lookup in case when value changes very quickly:
       this.onChangeTimeout = delay(() => {
-        this.inputPhase.resolve();
+        this.onChangeTimeout = null;
+        this.onValueChange();
       }, this.options.deferRequestBy);
     } else {
-      this.inputPhase.resolve();
+      this.onValueChange();
     }
   }
 
@@ -1469,13 +1491,17 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    */
   selectCurrentValue(selectionOptions) {
     const that = this;
-    const result = new Deferred();
+    const result = withResolvers<number>();
 
     // force onValueChange to be executed if it has been deferred
-    that.inputPhase.resolve();
+    if (that.onChangeTimeout) {
+      clearTimeout(that.onChangeTimeout);
+      that.onChangeTimeout = null;
+      that.onValueChange();
+    }
 
-    that.fetchPhase
-      .done(function () {
+    that.fetchPhase.then(
+      () => {
         let index;
 
         // When suggestion has already been selected and not modified
@@ -1492,12 +1518,13 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
             result.resolve(index);
           }
         }
-      })
-      .fail(function () {
+      },
+      () => {
         result.reject();
-      });
+      },
+    );
 
-    return result;
+    return result.promise;
   }
 
   /**
@@ -1560,7 +1587,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     const hasSameValues = that.hasSameValues(suggestion);
 
-    that.enrichSuggestion(suggestion, selectionOptions)?.done(function (enrichedSuggestion: any, hasBeenEnriched: boolean) {
+    return that.enrichSuggestion(suggestion, selectionOptions).then(([enrichedSuggestion, hasBeenEnriched]) => {
       const newSelectionOptions = extend(
         {
           hasBeenEnriched,
@@ -2219,39 +2246,35 @@ function checkLocation(this: Suggestions) {
     return;
   }
 
-  that.geoLocation = new Deferred();
+  that.geoLocation = null;
   if (isPlainObject(providedLocation) || Array.isArray(providedLocation)) {
-    that.geoLocation.resolve(providedLocation);
+    that.geoLocation = providedLocation;
     that.geoLocationValue = providedLocation;
   } else {
     if (!locationRequest) {
       locationRequest = ajax(that.getAjaxParams("iplocate/address"));
     }
 
-    locationRequest
-      .done(function (resp) {
+    locationRequest.then(
+      (resp) => {
         const locationData = resp && resp.location && resp.location.data;
         if (locationData && locationData.kladr_id) {
-          that.geoLocation.resolve({
+          that.geoLocation = {
             kladr_id: locationData.kladr_id,
-          });
-        } else {
-          that.geoLocation.reject();
+          };
         }
-      })
-      .fail(function () {
-        that.geoLocation.reject();
-      });
+      },
+      () => {},
+    );
   }
 }
 
 function constructParams(this: Suggestions) {
   const params = {};
 
-  if (this.geoLocation && typeof this.geoLocation.promise === "function" && this.geoLocation.state() === "resolved") {
-    this.geoLocation.done(function (locationData) {
-      params.locations_boost = Array.isArray(locationData) ? locationData : [locationData];
-    });
+  if (this.geoLocation) {
+    const locationData = this.geoLocation;
+    params.locations_boost = Array.isArray(locationData) ? locationData : [locationData];
   }
 
   return params;

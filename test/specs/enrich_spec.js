@@ -97,7 +97,7 @@ describe("Enrich", function () {
     server.restore();
   });
 
-  it("Should NOT enrich a suggestion for names", function () {
+  it("Should NOT enrich a suggestion for names", async () => {
     instance.setOptions({
       type: "NAME",
     });
@@ -106,16 +106,18 @@ describe("Enrich", function () {
     input.value = "Р";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures.poorName));
+    await expect.poll(() => instance.visible).toBe(true);
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
     // request for enriched suggestion not sent
+    await expect.poll(() => instance.selection).toBeTruthy();
     expect(server.requests.length).toEqual(0);
   });
 
-  it("Should enrich a suggestion for parties", function () {
+  it("Should enrich a suggestion for parties", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -124,18 +126,19 @@ describe("Enrich", function () {
     input.value = "Р";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures.poorParty));
+    await expect.poll(() => instance.visible).toBe(true);
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
     // request for enriched suggestion not sent
-    expect(server.requests.length).toEqual(1);
+    await expect.poll(() => server.requests.length).toEqual(1);
     expect(server.requests[0].requestBody).toContain('"count":1');
     expect(server.requests[0].requestBody).toContain(`"query":"${fixtures.poorParty[0].data.hid}"`);
   });
 
-  it("Should enrich a suggestion for banks", function () {
+  it("Should enrich a suggestion for banks", async () => {
     instance.setOptions({
       type: "BANK",
     });
@@ -144,34 +147,36 @@ describe("Enrich", function () {
     input.value = "а";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures.poorBank));
+    await expect.poll(() => instance.visible).toBe(true);
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
     // request for enriched suggestion not sent
-    expect(server.requests.length).toEqual(1);
+    await expect.poll(() => server.requests.length).toEqual(1);
     expect(server.requests[0].requestBody).toContain('"count":1');
     expect(server.requests[0].requestBody).toContain(`"query":"${fixtures.poorBank[0].data.bic}"`);
   });
 
-  it("Should enrich address when selected", function () {
+  it("Should enrich address when selected", async () => {
     // select address
     input.value = "М";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures.poorAddress));
+    await expect.poll(() => instance.visible).toBe(true);
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
     // request for enriched suggestion
-    expect(server.requests.length).toEqual(1);
+    await expect.poll(() => server.requests.length).toEqual(1);
     expect(server.requests[0].requestBody).toContain('"count":1');
     expect(server.requests[0].requestBody).toContain(`"query":"${fixtures.poorAddress[0].value}"`);
   });
 
-  it("Should send unrestricted_value for enrichment", function () {
+  it("Should send unrestricted_value for enrichment", async () => {
     instance.setOptions({
       constraints: {
         locations: {
@@ -187,18 +192,19 @@ describe("Enrich", function () {
     input.value = "Сол";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures.poorAddressRestricted));
+    await expect.poll(() => instance.visible).toBe(true);
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
     // request for enriched suggestion
-    expect(server.requests.length).toEqual(1);
+    await expect.poll(() => server.requests.length).toEqual(1);
     expect(server.requests[0].requestBody).toContain('"count":1');
     expect(server.requests[0].requestBody).toContain(`"query":"${fixtures.poorAddressRestricted[0].unrestricted_value}"`);
   });
 
-  it("Should not send constraints and boost parameters for enrichment", function () {
+  it("Should not send constraints and boost parameters for enrichment", async () => {
     instance.setOptions({
       constraints: {
         locations: {
@@ -214,13 +220,14 @@ describe("Enrich", function () {
     input.value = "Сол";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures.poorAddressRestricted));
+    await expect.poll(() => instance.visible).toBe(true);
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
     // request for enriched suggestion
-    expect(server.requests.length).toEqual(1);
+    await expect.poll(() => server.requests.length).toEqual(1);
     expect(server.requests[0].requestBody).not.toContain('"locations"');
     expect(server.requests[0].requestBody).not.toContain('"locations_boost"');
   });
@@ -239,7 +246,7 @@ describe("Enrich", function () {
     expect(server.requests.length).toEqual(0);
   });
 
-  it("Should ignore server `enrich:false` status", function () {
+  it("Should ignore server `enrich:false` status", async () => {
     Suggestions.resetTokens();
     instance.setOptions({
       token: "456",
@@ -254,26 +261,29 @@ describe("Enrich", function () {
     input.value = "М";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures.poorAddress));
+    await expect.poll(() => instance.visible).toBe(true);
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
     // request enriched suggestion is sent
-    expect(server.requests.length).toEqual(1);
+    await expect.poll(() => server.requests.length).toEqual(1);
   });
 
-  it("Should NOT enrich a suggestion with specified qc", function () {
+  it("Should NOT enrich a suggestion with specified qc", async () => {
     // select address
     input.value = "М";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures.enriched));
+    await expect.poll(() => instance.visible).toBe(true);
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
     // request for enriched suggestion not sent
+    await expect.poll(() => instance.selection).toBeTruthy();
     expect(server.requests.length).toEqual(0);
   });
 });

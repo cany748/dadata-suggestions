@@ -27,7 +27,7 @@ describe("Element events", function () {
     server.restore();
   });
 
-  it("`suggestions-select` should be triggered", function () {
+  it("`suggestions-select` should be triggered", async () => {
     const suggestion = { value: "A", data: "B" };
     let eventArgs;
 
@@ -38,7 +38,8 @@ describe("Element events", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor([suggestion]));
-    instance.select(0);
+    await expect.poll(() => instance.visible).toBe(true);
+    await instance.select(0);
 
     expect(eventArgs).toEqual([helpers.appendUnrestrictedValue(suggestion), true]);
   });
@@ -59,7 +60,7 @@ describe("Element events", function () {
     expect(eventArgs).toEqual(["A"]);
   });
 
-  it("`suggestions-invalidateselection` should be triggered", function () {
+  it("`suggestions-invalidateselection` should be triggered", async () => {
     const suggestion = { value: "A", data: "B" };
     let eventArgs;
 
@@ -70,7 +71,8 @@ describe("Element events", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor([suggestion]));
-    instance.select(0);
+    await expect.poll(() => instance.visible).toBe(true);
+    await instance.select(0);
 
     input.value = "Aaaa";
     instance.onValueChange();
@@ -114,7 +116,7 @@ describe("Element events", function () {
     expect(triggered).toBe(true);
   });
 
-  it("`suggestions-fixdata` should be triggered", function () {
+  it("`suggestions-fixdata` should be triggered", async () => {
     let triggered = false;
     input.addEventListener("suggestions-fixdata", () => {
       triggered = true;
@@ -134,6 +136,6 @@ describe("Element events", function () {
       ]),
     ]);
 
-    expect(triggered).toBe(true);
+    await expect.poll(() => triggered).toBe(true);
   });
 });

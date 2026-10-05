@@ -25,11 +25,12 @@ describe("Highlight suggestions", function () {
     server.restore();
   });
 
-  it("Should highlight search phrase, in the beginning of word", function () {
+  it("Should highlight search phrase, in the beginning of word", async () => {
     input.value = "japa";
     instance.onValueChange();
 
     server.respond(helpers.responseFor(["Japaneese lives in Japan and love nonjapaneese"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -39,11 +40,12 @@ describe("Highlight suggestions", function () {
     );
   });
 
-  it("Should highlight search phrase, in the middle of word, if surrounded by delimiters", function () {
+  it("Should highlight search phrase, in the middle of word, if surrounded by delimiters", async () => {
     input.value = "japa";
     instance.onValueChange();
 
     server.respond(helpers.responseFor(["Japaneese and non-japaneese"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -51,11 +53,12 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toEqual(helpers.wrapFormattedValue("<strong>Japa</strong>neese and non-<strong>japa</strong>neese"));
   });
 
-  it("Should highlight search phrase with delimiter in the middle", function () {
+  it("Should highlight search phrase with delimiter in the middle", async () => {
     input.value = "санкт-петер";
     instance.onValueChange();
 
     server.respond(helpers.responseFor(["г Санкт-Петербург"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -63,11 +66,12 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toEqual(helpers.wrapFormattedValue("г <strong>Санкт-Петер</strong>бург"));
   });
 
-  it("Should highlight search phrase with delimiter in the middle, example 2", function () {
+  it("Should highlight search phrase with delimiter in the middle, example 2", async () => {
     input.value = "на-дон";
     instance.onValueChange();
 
     server.respond(helpers.responseFor(["Ростовская обл, г Ростов-на-Дону"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -75,11 +79,12 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toContain("Ростов-<strong>на-Дон</strong>у");
   });
 
-  it("Should highlight words of search phrase within complex word", function () {
+  it("Should highlight words of search phrase within complex word", async () => {
     input.value = "ростов-на дон";
     instance.onValueChange();
 
     server.respond(helpers.responseFor(["Ростовская обл, г Ростов-на-Дону"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -87,12 +92,13 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toContain("<strong>Ростов-на</strong>-<strong>Дон</strong>у");
   });
 
-  it("Should highlight words of search phrase within complex word, example 2", function () {
+  it("Should highlight words of search phrase within complex word, example 2", async () => {
     instance.setOptions({ type: "PARTY" });
     input.value = "альфа банк";
     instance.onValueChange();
 
     server.respond(helpers.responseFor(["ОАО АЛЬФА-БАНК"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -100,7 +106,7 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toContain("ОАО <strong>АЛЬФА</strong>-<strong>БАНК</strong>");
   });
 
-  it("Should not use object type for highlight if there are matching name", function () {
+  it("Should not use object type for highlight if there are matching name", async () => {
     instance.setOptions({
       type: "ADDRESS",
     });
@@ -109,6 +115,7 @@ describe("Highlight suggestions", function () {
     instance.onValueChange();
 
     server.respond(helpers.responseFor(["Приморский край, Партизанский р-н, поселок Николаевка"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -121,7 +128,7 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toContain("<strong>Нико</strong>лаевка");
   });
 
-  it("Should highlight search phrase in quotes", function () {
+  it("Should highlight search phrase in quotes", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -129,6 +136,7 @@ describe("Highlight suggestions", function () {
     instance.onValueChange();
 
     server.respond(helpers.responseFor(['ООО "Фирма"']));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -136,7 +144,7 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toEqual(helpers.wrapFormattedValue('ООО "<strong>Фирма</strong>"'));
   });
 
-  it("Should highlight names regardless of parts order", function () {
+  it("Should highlight names regardless of parts order", async () => {
     instance.setOptions({
       params: {
         parts: ["NAME", "PATRONYMIC", "SURNAME"],
@@ -146,6 +154,7 @@ describe("Highlight suggestions", function () {
     instance.onValueChange();
 
     server.respond(helpers.responseFor(["Петров Петр Иванович"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -155,7 +164,7 @@ describe("Highlight suggestions", function () {
     );
   });
 
-  it("Should highlight address in parties, ignoring address components types", function () {
+  it("Should highlight address in parties, ignoring address components types", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -175,6 +184,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
     const html = items[0].innerHTML;
@@ -187,7 +197,7 @@ describe("Highlight suggestions", function () {
     expect(html).not.toContain("<strong>кра</strong>й");
   });
 
-  it("Should highlight INN in parties (full match)", function () {
+  it("Should highlight INN in parties (full match)", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -209,6 +219,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
     const html = items[0].innerHTML;
@@ -218,7 +229,7 @@ describe("Highlight suggestions", function () {
     expect(html).toContain(`<span class="suggestions-subtext suggestions-subtext_inline">${pattern}</span>`);
   });
 
-  it("Should highlight INN in parties (partial match)", function () {
+  it("Should highlight INN in parties (partial match)", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -240,6 +251,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
     const html = items[0].innerHTML;
@@ -249,7 +261,7 @@ describe("Highlight suggestions", function () {
     expect(html).toContain(`<span class="suggestions-subtext suggestions-subtext_inline">${pattern}</span>`);
   });
 
-  it("Should escape html entries", function () {
+  it("Should escape html entries", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -264,6 +276,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -271,7 +284,7 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toContain("<strong>ЗАО</strong> <strong>&amp;LT</strong> &lt;b&gt;bold&lt;/b&gt;");
   });
 
-  it("Should drop the end of text if `maxLength` option specified", function () {
+  it("Should drop the end of text if `maxLength` option specified", async () => {
     instance.setOptions({
       type: "PARTY",
       mobileWidth: 20_000,
@@ -289,6 +302,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -298,7 +312,7 @@ describe("Highlight suggestions", function () {
     );
   });
 
-  it("Should show labels for same-looking suggestions", function () {
+  it("Should show labels for same-looking suggestions", async () => {
     instance.setOptions({
       type: "NAME",
     });
@@ -326,6 +340,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -334,7 +349,7 @@ describe("Highlight suggestions", function () {
     expect(items[1].innerHTML).toContain('<span class="suggestions-subtext suggestions-subtext_label">имя, фамилия</span>');
   });
 
-  it("Should show OGRN instead of INN if match", function () {
+  it("Should show OGRN instead of INN if match", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -357,6 +372,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -366,7 +382,7 @@ describe("Highlight suggestions", function () {
     );
   });
 
-  it("Should show latin name instead of regular name if match", function () {
+  it("Should show latin name instead of regular name if match", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -387,6 +403,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -394,7 +411,7 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toContain('JSC "<strong>ALFA</strong>-TECHNICA"');
   });
 
-  it("Should show director's name instead of address if match", function () {
+  it("Should show director's name instead of address if match", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -416,6 +433,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -423,7 +441,7 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toContain("</span><strong>Жура</strong>влев Дмитрий Сергеевич</div>");
   });
 
-  it("Should show attribute with status", function () {
+  it("Should show attribute with status", async () => {
     instance.setOptions({
       type: "PARTY",
     });
@@ -443,6 +461,7 @@ describe("Highlight suggestions", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 
@@ -450,7 +469,7 @@ describe("Highlight suggestions", function () {
     expect(items[0].innerHTML).toContain(' data-suggestion-status="LIQUIDATED"');
   });
 
-  it("should show history values", function () {
+  it("should show history values", async () => {
     instance.setOptions({
       type: "ADDRESS",
     });
@@ -473,6 +492,7 @@ describe("Highlight suggestions", function () {
     ];
 
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const items = instance.container.querySelectorAll(".suggestions-suggestion");
 

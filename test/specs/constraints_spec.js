@@ -388,7 +388,7 @@ describe("Address constraints", function () {
     expect(server.requests[0].requestBody).toContain(JSON.stringify(locations));
   });
 
-  it("Should set unrestricted suggestion value", function () {
+  it("Should set unrestricted suggestion value", async () => {
     instance.setOptions({
       constraints: {
         label: "обл Ростовская, г Ростов-на-Дону",
@@ -404,14 +404,16 @@ describe("Address constraints", function () {
     input.value = "Буквенная 20";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
-    expect(instance.suggestions[0]).toEqual({
-      value: "ул Буквенная, д 20",
-      unrestricted_value: "обл Ростовская, г Ростов-на-Дону, ул Буквенная, д 20",
-      data: null,
-    });
+    await expect
+      .poll(() => instance.suggestions[0])
+      .toEqual({
+        value: "ул Буквенная, д 20",
+        unrestricted_value: "обл Ростовская, г Ростов-на-Дону, ул Буквенная, д 20",
+        data: null,
+      });
   });
 
-  it("Should not set unrestricted suggestion value on multiple constraints", function () {
+  it("Should not set unrestricted suggestion value on multiple constraints", async () => {
     instance.setOptions({
       constraints: [
         {
@@ -434,11 +436,13 @@ describe("Address constraints", function () {
     input.value = "Буквенная 20";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
-    expect(instance.suggestions[0]).toEqual({
-      value: "ул Буквенная, д 20",
-      unrestricted_value: "ул Буквенная, д 20",
-      data: null,
-    });
+    await expect
+      .poll(() => instance.suggestions[0])
+      .toEqual({
+        value: "ул Буквенная, д 20",
+        unrestricted_value: "ул Буквенная, д 20",
+        data: null,
+      });
   });
 
   describe("in cooperation with other control", function () {
@@ -480,7 +484,7 @@ describe("Address constraints", function () {
       expect(server.requests[0].requestBody).toContain('"restrict_value":true');
     });
 
-    it("Should fill empty parent control when suggestion is selected in child", function () {
+    it("Should fill empty parent control when suggestion is selected in child", async () => {
       instance.setOptions({
         bounds: "street-",
         constraints: parentInput,
@@ -489,8 +493,9 @@ describe("Address constraints", function () {
       input.value = "бара";
       instance.onValueChange();
       server.respond(helpers.responseFor([fixtures.fullyAddress]));
+      await expect.poll(() => instance.visible).toBe(true);
       instance.selectedIndex = 0;
-      instance.select(0);
+      await instance.select(0);
 
       expect(parentInput.value).toEqual("Тульская обл, Узловский р-н");
       expect(parentInstance.selection.data).toEqual(
@@ -501,7 +506,7 @@ describe("Address constraints", function () {
       );
     });
 
-    it("Should fill non-empty parent control with region different from selected", function () {
+    it("Should fill non-empty parent control with region different from selected", async () => {
       parentInstance.setSuggestion({
         value: "Новосибирская обл",
         data: {
@@ -517,8 +522,9 @@ describe("Address constraints", function () {
       input.value = "бара";
       instance.onValueChange();
       server.respond(helpers.responseFor([fixtures.fullyAddress]));
+      await expect.poll(() => instance.visible).toBe(true);
       instance.selectedIndex = 0;
-      instance.select(0);
+      await instance.select(0);
 
       expect(parentInput.value).toEqual("Тульская обл, Узловский р-н");
       expect(parentInstance.selection.data).toEqual(
@@ -529,7 +535,7 @@ describe("Address constraints", function () {
       );
     });
 
-    it("Should not fill non-empty parent control with region same as selected", function () {
+    it("Should not fill non-empty parent control with region same as selected", async () => {
       const selectionData = {
         country: "Россия",
         region: "Тульская",
@@ -548,14 +554,15 @@ describe("Address constraints", function () {
       input.value = "бара";
       instance.onValueChange();
       server.respond(helpers.responseFor([fixtures.fullyAddress]));
+      await expect.poll(() => instance.visible).toBe(true);
       instance.selectedIndex = 0;
-      instance.select(0);
+      await instance.select(0);
 
       expect(parentInput.value).toEqual("Тульская, Узловский");
       expect(parentInstance.selection.data).toEqual(selectionData);
     });
 
-    it("Should spread data to all parents", function () {
+    it("Should spread data to all parents", async () => {
       parentInput.value = "Тульская обл, Узловский р-н";
       input.value = "г Узловая, поселок Брусянский, ул Строителей, д 1-бара";
 
@@ -567,17 +574,19 @@ describe("Address constraints", function () {
       instance.fixData();
       server.respond(helpers.responseFor([fixtures.fullyAddress]));
 
-      expect(parentInstance.selection.data).toEqual(
-        jasmine.objectContaining({
-          region: "Тульская",
-          region_type: "обл",
-          area: "Узловский",
-          area_type: "р-н",
-        }),
-      );
+      await expect
+        .poll(() => parentInstance.selection?.data)
+        .toEqual(
+          jasmine.objectContaining({
+            region: "Тульская",
+            region_type: "обл",
+            area: "Узловский",
+            area_type: "р-н",
+          }),
+        );
     });
 
-    it("Should remove city_fias_id from city request", function () {
+    it("Should remove city_fias_id from city request", async () => {
       const suggestions = [
         {
           value: "г Санкт-Петербург",
@@ -595,9 +604,12 @@ describe("Address constraints", function () {
       parentInput.value = "Санкт";
       parentInstance.onValueChange();
       server.respond(helpers.responseFor(suggestions));
+      await expect.poll(() => parentInstance.visible).toBe(true);
       parentInstance.selectedIndex = 0;
       helpers.hitEnter(parentInput);
+      await expect.poll(() => server.queue).toHaveLength(1);
       server.respond(helpers.responseFor(suggestions));
+      await expect.poll(() => parentInstance.selection).toBeTruthy();
 
       instance.setOptions({
         bounds: "city",

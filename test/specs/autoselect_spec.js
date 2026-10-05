@@ -23,17 +23,18 @@ describe("Autoselect", function () {
     server.restore();
   });
 
-  it("Should not autoselect first item by default", function () {
+  it("Should not autoselect first item by default", async () => {
     instance.selectedIndex = -1;
 
     input.value = "Jam";
     instance.onValueChange();
     server.respond(helpers.responseFor(["Jamaica", "Jamaica", "Jamaica"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     expect(instance.selectedIndex).toBe(-1);
   });
 
-  it("Should autoselect first item if autoSelectFirst set to true", function () {
+  it("Should autoselect first item if autoSelectFirst set to true", async () => {
     instance.setOptions({
       autoSelectFirst: true,
     });
@@ -42,6 +43,7 @@ describe("Autoselect", function () {
     input.value = "Jam";
     instance.onValueChange();
     server.respond(helpers.responseFor(["Jamaica", "Jamaica", "Jamaica"]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     expect(instance.selectedIndex).toBe(0);
   });

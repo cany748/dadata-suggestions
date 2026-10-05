@@ -32,36 +32,39 @@ describe("Keyboard navigation", function () {
     server.restore();
   });
 
-  it("Should select first suggestion on DOWN key in textbox", function () {
+  it("Should select first suggestion on DOWN key in textbox", async () => {
     instance.selectedIndex = -1;
 
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.keydown(input, 40);
 
     expect(instance.selectedIndex).toBe(0);
     expect(input.value).toEqual(suggestions[0].value);
   });
 
-  it("Should select last suggestion on UP key in textbox", function () {
+  it("Should select last suggestion on UP key in textbox", async () => {
     instance.selectedIndex = -1;
 
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.keydown(input, 38);
 
     expect(instance.selectedIndex).toBe(2);
     expect(input.value).toEqual(suggestions[2].value);
   });
 
-  it("Should select textbox on DOWN key in last suggestion", function () {
+  it("Should select textbox on DOWN key in last suggestion", async () => {
     instance.selectedIndex = -1;
 
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
     instance.selectedIndex = 2;
     helpers.keydown(input, 40);
 

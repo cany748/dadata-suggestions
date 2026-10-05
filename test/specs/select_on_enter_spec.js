@@ -278,7 +278,7 @@ describe("Select on Enter", function () {
     server.restore();
   });
 
-  it("Should trigger on full match", function () {
+  it("Should trigger on full match", async () => {
     const options = {
       onSelect() {},
     };
@@ -290,15 +290,16 @@ describe("Select on Enter", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
 
     input.value = "Albania";
     helpers.hitEnter(input);
 
-    expect(options.onSelect.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue({ value: "Albania", data: "Al" }), true);
   });
 
-  it("Should not trigger on full match if `triggerSelectOnEnter` is false", function () {
+  it("Should not trigger on full match if `triggerSelectOnEnter` is false", async () => {
     const options = {
       onSelect() {},
     };
@@ -310,15 +311,16 @@ describe("Select on Enter", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
 
     input.value = "Albania";
     helpers.hitEnter(input);
 
-    expect(options.onSelect.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue({ value: "Albania", data: "Al" }), true);
   });
 
-  it("Should trigger when suggestion is selected manually", function () {
+  it("Should trigger when suggestion is selected manually", async () => {
     const options = {
       onSelect() {},
     };
@@ -329,15 +331,16 @@ describe("Select on Enter", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
 
     instance.selectedIndex = 2;
     helpers.hitEnter(input);
 
-    expect(options.onSelect.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue({ value: "Andorra", data: "An" }), true);
   });
 
-  it("Should NOT trigger on partial match", function () {
+  it("Should NOT trigger on partial match", async () => {
     const options = {
       onSelect() {},
     };
@@ -349,14 +352,16 @@ describe("Select on Enter", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
 
     input.value = "Alba";
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when nothing matched", function () {
+  it("Should NOT trigger when nothing matched", async () => {
     const options = {
       onSelect() {},
     };
@@ -368,14 +373,16 @@ describe("Select on Enter", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
 
     input.value = "Alge";
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should trigger when normalized query equals single suggestion from list (same parent)", function () {
+  it("Should trigger when normalized query equals single suggestion from list (same parent)", async () => {
     const options = {
       onSelect() {},
     };
@@ -387,18 +394,21 @@ describe("Select on Enter", function () {
     input.value = "тверская оленинский упыри";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(
-      helpers.appendUnrestrictedValue({
-        value: "Россия, обл Тверская, р-н Оленинский, д Упыри",
-        data: 0,
-      }),
-      true,
-    );
+    await expect
+      .poll(() => options.onSelect)
+      .toHaveBeenCalledWith(
+        helpers.appendUnrestrictedValue({
+          value: "Россия, обл Тверская, р-н Оленинский, д Упыри",
+          data: 0,
+        }),
+        true,
+      );
   });
 
-  it("Should trigger when normalized query equals single suggestion from list (not same parent)", function () {
+  it("Should trigger when normalized query equals single suggestion from list (not same parent)", async () => {
     const options = {
       onSelect() {},
     };
@@ -410,18 +420,21 @@ describe("Select on Enter", function () {
     input.value = "г москва, зеленоград";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(
-      helpers.appendUnrestrictedValue({
-        value: "г Москва, г Зеленоград",
-        data: 0,
-      }),
-      true,
-    );
+    await expect
+      .poll(() => options.onSelect)
+      .toHaveBeenCalledWith(
+        helpers.appendUnrestrictedValue({
+          value: "г Москва, г Зеленоград",
+          data: 0,
+        }),
+        true,
+      );
   });
 
-  it("Should NOT trigger when normalized query equals single suggestion from list AND is contained in other", function () {
+  it("Should NOT trigger when normalized query equals single suggestion from list AND is contained in other", async () => {
     const options = {
       onSelect() {},
     };
@@ -433,12 +446,14 @@ describe("Select on Enter", function () {
     input.value = "новосибирская";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when normalized query encloses suggestion from list", function () {
+  it("Should NOT trigger when normalized query encloses suggestion from list", async () => {
     const options = {
       onSelect() {},
     };
@@ -450,12 +465,14 @@ describe("Select on Enter", function () {
     input.value = "Россия, обл Тверская, р-н Оленинский, д Упыри ул";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when normalized query equals multiple suggestions from list", function () {
+  it("Should NOT trigger when normalized query equals multiple suggestions from list", async () => {
     const options = {
       onSelect() {},
     };
@@ -467,12 +484,14 @@ describe("Select on Enter", function () {
     input.value = "москва мира";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should trigger when normalized query byword-matches same parent list #1", function () {
+  it("Should trigger when normalized query byword-matches same parent list #1", async () => {
     const options = {
       onSelect() {},
     };
@@ -484,19 +503,22 @@ describe("Select on Enter", function () {
     input.value = "ставропольский средний зеленая 36";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
     // expect to select first matching suggestion
-    expect(options.onSelect).toHaveBeenCalledWith(
-      helpers.appendUnrestrictedValue({
-        value: "Россия, край Ставропольский, р-н Александровский, х Средний, ул Зеленая, д 36",
-        data: 0,
-      }),
-      true,
-    );
+    await expect
+      .poll(() => options.onSelect)
+      .toHaveBeenCalledWith(
+        helpers.appendUnrestrictedValue({
+          value: "Россия, край Ставропольский, р-н Александровский, х Средний, ул Зеленая, д 36",
+          data: 0,
+        }),
+        true,
+      );
   });
 
-  it("Should trigger when normalized query byword-matches same parent list #2", function () {
+  it("Should trigger when normalized query byword-matches same parent list #2", async () => {
     const options = {
       onSelect() {},
     };
@@ -508,19 +530,22 @@ describe("Select on Enter", function () {
     input.value = "новосибирск ленина 12";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
     // expect to select first matching suggestion
-    expect(options.onSelect).toHaveBeenCalledWith(
-      helpers.appendUnrestrictedValue({
-        value: "Новосибирская обл, г Новосибирск, ул Ленина, д 12",
-        data: 0,
-      }),
-      true,
-    );
+    await expect
+      .poll(() => options.onSelect)
+      .toHaveBeenCalledWith(
+        helpers.appendUnrestrictedValue({
+          value: "Новосибирская обл, г Новосибирск, ул Ленина, д 12",
+          data: 0,
+        }),
+        true,
+      );
   });
 
-  it("Should NOT trigger when normalized query byword-matches same parent list, but houses differ", function () {
+  it("Should NOT trigger when normalized query byword-matches same parent list, but houses differ", async () => {
     const options = {
       onSelect() {},
     };
@@ -532,12 +557,14 @@ describe("Select on Enter", function () {
     input.value = "новосибирск ленина 2";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when normalized query byword-matches different parent list #1", function () {
+  it("Should NOT trigger when normalized query byword-matches different parent list #1", async () => {
     const options = {
       onSelect() {},
     };
@@ -549,12 +576,14 @@ describe("Select on Enter", function () {
     input.value = "ленина 36";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when normalized query byword-matches different parent list #2", function () {
+  it("Should NOT trigger when normalized query byword-matches different parent list #2", async () => {
     const options = {
       onSelect() {},
     };
@@ -566,12 +595,14 @@ describe("Select on Enter", function () {
     input.value = "средний зеленая 36";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when the last word in query is a stop-word", function () {
+  it("Should NOT trigger when the last word in query is a stop-word", async () => {
     const options = {
       onSelect() {},
     };
@@ -583,12 +614,14 @@ describe("Select on Enter", function () {
     input.value = "зеленоград мкр";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when byword matched several suggestions", function () {
+  it("Should NOT trigger when byword matched several suggestions", async () => {
     const options = {
       type: "NAME",
       onSelect() {},
@@ -601,12 +634,14 @@ describe("Select on Enter", function () {
     input.value = "Петр Иванович";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should trigger on joint query match (case 1)", function () {
+  it("Should trigger on joint query match (case 1)", async () => {
     const options = {
       onSelect() {},
     };
@@ -618,18 +653,21 @@ describe("Select on Enter", function () {
     input.value = "москва енисейская24";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(
-      helpers.appendUnrestrictedValue({
-        value: "г Москва, ул Енисейская, д 24",
-        data: 0,
-      }),
-      true,
-    );
+    await expect
+      .poll(() => options.onSelect)
+      .toHaveBeenCalledWith(
+        helpers.appendUnrestrictedValue({
+          value: "г Москва, ул Енисейская, д 24",
+          data: 0,
+        }),
+        true,
+      );
   });
 
-  it("Should trigger on joint query match (case 2)", function () {
+  it("Should trigger on joint query match (case 2)", async () => {
     const options = {
       onSelect() {},
     };
@@ -641,15 +679,18 @@ describe("Select on Enter", function () {
     input.value = "москва енисейская 24стр2";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(
-      helpers.appendUnrestrictedValue({
-        value: "г Москва, ул Енисейская, д 24 стр 2",
-        data: 1,
-      }),
-      true,
-    );
+    await expect
+      .poll(() => options.onSelect)
+      .toHaveBeenCalledWith(
+        helpers.appendUnrestrictedValue({
+          value: "г Москва, ул Енисейская, д 24 стр 2",
+          data: 1,
+        }),
+        true,
+      );
   });
 
   it("Should NOT trigger when joint query not matched", function () {
@@ -669,7 +710,7 @@ describe("Select on Enter", function () {
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger on slash house partial match", function () {
+  it("Should NOT trigger on slash house partial match", async () => {
     const options = {
       onSelect() {},
     };
@@ -681,12 +722,14 @@ describe("Select on Enter", function () {
     input.value = "респ Татарстан, г Набережные Челны, ул Нижняя Боровецкая, д 1";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger on conflicting house-building match", function () {
+  it("Should NOT trigger on conflicting house-building match", async () => {
     const options = {
       onSelect() {},
     };
@@ -698,12 +741,14 @@ describe("Select on Enter", function () {
     input.value = "г Красноярск, ул Авиаторов, д 5";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should trigger on E = YO", function () {
+  it("Should trigger on E = YO", async () => {
     const options = {
       onSelect() {},
     };
@@ -715,18 +760,21 @@ describe("Select on Enter", function () {
     input.value = "санкт-петербург пугачева";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(
-      helpers.appendUnrestrictedValue({
-        value: "г Санкт-Петербург, ул Пугачёва",
-        data: 0,
-      }),
-      true,
-    );
+    await expect
+      .poll(() => options.onSelect)
+      .toHaveBeenCalledWith(
+        helpers.appendUnrestrictedValue({
+          value: "г Санкт-Петербург, ул Пугачёва",
+          data: 0,
+        }),
+        true,
+      );
   });
 
-  it("Should trigger on hyphen as a separator", function () {
+  it("Should trigger on hyphen as a separator", async () => {
     const options = {
       onSelect() {},
     };
@@ -738,18 +786,21 @@ describe("Select on Enter", function () {
     input.value = "санкт петербург пугачёва 15-44";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(
-      helpers.appendUnrestrictedValue({
-        value: "г Санкт-Петербург, ул Пугачёва, д 15, кв 44",
-        data: 0,
-      }),
-      true,
-    );
+    await expect
+      .poll(() => options.onSelect)
+      .toHaveBeenCalledWith(
+        helpers.appendUnrestrictedValue({
+          value: "г Санкт-Петербург, ул Пугачёва, д 15, кв 44",
+          data: 0,
+        }),
+        true,
+      );
   });
 
-  it("Should trigger when fields (inn) match single suggestion", function () {
+  it("Should trigger when fields (inn) match single suggestion", async () => {
     const options = {
       type: "PARTY",
       onSelect() {},
@@ -762,12 +813,13 @@ describe("Select on Enter", function () {
     input.value = "хф 7707545900";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["хф 7707545900"][0]), true);
+    await expect.poll(() => options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["хф 7707545900"][0]), true);
   });
 
-  it("Should trigger when fields (ogrn) match single suggestion", function () {
+  it("Should trigger when fields (ogrn) match single suggestion", async () => {
     const options = {
       type: "PARTY",
       onSelect() {},
@@ -780,12 +832,13 @@ describe("Select on Enter", function () {
     input.value = "1057746629115";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["1057746629115"][0]), true);
+    await expect.poll(() => options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["1057746629115"][0]), true);
   });
 
-  it("Should trigger when fields (inn) partially match single suggestion", function () {
+  it("Should trigger when fields (inn) partially match single suggestion", async () => {
     const options = {
       type: "PARTY",
       onSelect() {},
@@ -800,12 +853,13 @@ describe("Select on Enter", function () {
     input.value = "хф 770754";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["хф 770754"][0]), true);
+    await expect.poll(() => options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["хф 770754"][0]), true);
   });
 
-  it("Should trigger when fields (bic) partially match single suggestion", function () {
+  it("Should trigger when fields (bic) partially match single suggestion", async () => {
     const options = {
       type: "BANK",
       onSelect() {},
@@ -820,12 +874,13 @@ describe("Select on Enter", function () {
     input.value = "альфа 04452";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
 
-    expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["альфа 04452"][0]), true);
+    await expect.poll(() => options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(fixtures["альфа 04452"][0]), true);
   });
 
-  it("Should NOT trigger when fields match several suggestions", function () {
+  it("Should NOT trigger when fields match several suggestions", async () => {
     const options = {
       type: "PARTY",
       onSelect() {},
@@ -840,7 +895,9 @@ describe("Select on Enter", function () {
     input.value = "газпром 1027700055360";
     instance.onValueChange();
     server.respond();
+    await expect.poll(() => instance.visible).toBe(true);
     helpers.hitEnter(input);
+    await expect.poll(() => instance.visible).toBe(false);
 
     expect(instance.suggestions.length).toEqual(2);
     expect(options.onSelect).not.toHaveBeenCalled();

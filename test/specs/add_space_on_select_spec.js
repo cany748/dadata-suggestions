@@ -28,7 +28,7 @@ describe("Adding space on selecting", function () {
       input.remove();
     });
 
-    it("Should add SPACE at the end if only NAME specified", function () {
+    it("Should add SPACE at the end if only NAME specified", async () => {
       input.value = "N";
       instance.onValueChange();
       server.respond(
@@ -44,14 +44,15 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.keydown(input, 13);
 
-      expect(input.value).toEqual("Name ");
+      await expect.poll(() => input.value).toEqual("Name ");
     });
 
-    it("Should add SPACE at the end if only SURNAME specified", function () {
+    it("Should add SPACE at the end if only SURNAME specified", async () => {
       input.value = "S";
       instance.onValueChange();
       server.respond(
@@ -67,14 +68,15 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.keydown(input, 13);
 
-      expect(input.value).toEqual("Surname ");
+      await expect.poll(() => input.value).toEqual("Surname ");
     });
 
-    it("Should add SPACE at the end if only NAME and PATRONYMIC specified", function () {
+    it("Should add SPACE at the end if only NAME and PATRONYMIC specified", async () => {
       input.value = "N";
       instance.onValueChange();
       server.respond(
@@ -90,14 +92,15 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.keydown(input, 13);
 
-      expect(input.value).toEqual("Name Patronymic ");
+      await expect.poll(() => input.value).toEqual("Name Patronymic ");
     });
 
-    it("Should not add SPACE at the end if full name specified", function () {
+    it("Should not add SPACE at the end if full name specified", async () => {
       input.value = "S";
       instance.onValueChange();
       server.respond(
@@ -113,14 +116,15 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.keydown(input, 13);
 
-      expect(input.value).toEqual("Surname Name Patronymic");
+      await expect.poll(() => input.value).toEqual("Surname Name Patronymic");
     });
 
-    it("Should not add SPACE if only part expected", function () {
+    it("Should not add SPACE if only part expected", async () => {
       instance.setOptions({
         params: {
           parts: ["SURNAME"],
@@ -141,14 +145,15 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.keydown(input, 13);
 
-      expect(input.value).toEqual("Surname");
+      await expect.poll(() => input.value).toEqual("Surname");
     });
 
-    it("Should not add SPACE if only part expected (params set as function)", function () {
+    it("Should not add SPACE if only part expected (params set as function)", async () => {
       instance.setOptions({
         params() {
           return {
@@ -171,11 +176,12 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.keydown(input, 13);
 
-      expect(input.value).toEqual("Surname");
+      await expect.poll(() => input.value).toEqual("Surname");
     });
   });
 
@@ -204,7 +210,7 @@ describe("Adding space on selecting", function () {
       input.remove();
     });
 
-    it("Should add SPACE at the end if only COUNTRY specified", function () {
+    it("Should add SPACE at the end if only COUNTRY specified", async () => {
       input.value = "Р";
       instance.onValueChange();
       server.respond(
@@ -217,14 +223,15 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.keydown(input, 13);
 
-      expect(input.value).toEqual("Россия ");
+      await expect.poll(() => input.value).toEqual("Россия ");
     });
 
-    it("Should add SPACE at the end if COUNTRY..HOUSE specified", function () {
+    it("Should add SPACE at the end if COUNTRY..HOUSE specified", async () => {
       input.value = "Р";
       instance.onValueChange();
       server.respond(
@@ -243,14 +250,15 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.hitEnter(input);
 
-      expect(input.value).toEqual("Россия, г Москва, ул Арбат, д 1 ");
+      await expect.poll(() => input.value).toEqual("Россия, г Москва, ул Арбат, д 1 ");
     });
 
-    it("Should not add SPACE at the end if FLAT specified", function () {
+    it("Should not add SPACE at the end if FLAT specified", async () => {
       input.value = "Р";
       instance.onValueChange();
       server.respond(
@@ -271,11 +279,12 @@ describe("Adding space on selecting", function () {
           },
         ]),
       );
+      await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
       helpers.hitEnter(input);
 
-      expect(input.value).toEqual("Россия, г Москва, ул Арбат, д 1, кв 22");
+      await expect.poll(() => input.value).toEqual("Россия, г Москва, ул Арбат, д 1, кв 22");
     });
   });
 });

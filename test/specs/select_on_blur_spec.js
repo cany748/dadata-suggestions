@@ -27,7 +27,7 @@ describe("Select on blur", function () {
     server.restore();
   });
 
-  it("Should trigger on full match", function () {
+  it("Should trigger on full match", async () => {
     const suggestions = [
       { value: "Afghanistan", data: "Af" },
       { value: "Albania", data: "Al" },
@@ -44,14 +44,15 @@ describe("Select on blur", function () {
     input.value = "Albania";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     helpers.fireBlur(input);
 
-    expect(options.onSelect.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[1]), false);
   });
 
-  it("Should trigger when suggestion is selected manually", function () {
+  it("Should trigger when suggestion is selected manually", async () => {
     const suggestions = [
       { value: "Afghanistan", data: "Af" },
       { value: "Albania", data: "Al" },
@@ -67,15 +68,16 @@ describe("Select on blur", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     instance.selectedIndex = 2;
     helpers.fireBlur(input);
 
-    expect(options.onSelect.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[2]), true);
   });
 
-  it("Should NOT trigger on partial match", function () {
+  it("Should NOT trigger on partial match", async () => {
     const suggestions = [{ value: "Jamaica", data: "J" }];
     const options = {
       onSelect() {},
@@ -88,12 +90,13 @@ describe("Select on blur", function () {
     input.value = "Jam";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
     input.blur();
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when nothing matched", function () {
+  it("Should NOT trigger when nothing matched", async () => {
     const suggestions = [{ value: "Jamaica", data: "J" }];
     const options = {
       onSelect() {},
@@ -106,12 +109,13 @@ describe("Select on blur", function () {
     input.value = "Alg";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
     input.blur();
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should NOT trigger when triggerSelectOnBlur is false", function () {
+  it("Should NOT trigger when triggerSelectOnBlur is false", async () => {
     const suggestions = [{ value: "Jamaica", data: "J" }];
     const options = {
       onSelect() {},
@@ -123,6 +127,7 @@ describe("Select on blur", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     instance.selectedIndex = 0;
     helpers.fireBlur(input);

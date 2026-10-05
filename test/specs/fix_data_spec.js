@@ -24,13 +24,18 @@ describe("FixData", function () {
     server.restore();
   });
 
-  it("should not clear value on fixData", function () {
+  it("should not clear value on fixData", async () => {
     const value = "Санкт-Петербург, ул. Софийская, д.35, корп.4, кв.81";
     input.value = value;
+    let fixed = false;
+    input.addEventListener("suggestions-fixdata", () => {
+      fixed = true;
+    });
 
     instance.fixData();
     server.respond(helpers.responseFor([]));
 
+    await expect.poll(() => fixed).toBe(true);
     expect(input.value).toEqual(value);
   });
 });

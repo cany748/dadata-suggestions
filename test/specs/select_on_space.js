@@ -29,7 +29,7 @@ describe("Select on Space", function () {
     server.restore();
   });
 
-  it("Should trigger when suggestion is selected", function () {
+  it("Should trigger when suggestion is selected", async () => {
     const suggestions = [{ value: "Jamaica", data: "J" }];
     const options = {
       onSelect() {},
@@ -41,16 +41,17 @@ describe("Select on Space", function () {
     input.value = "Jam";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     instance.selectedIndex = 0;
 
     helpers.keydown(input, 32);
 
-    expect(options.onSelect.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), true);
   });
 
-  it("Should trigger when nothing is selected but there is exact match", function () {
+  it("Should trigger when nothing is selected but there is exact match", async () => {
     const suggestions = [{ value: "Jamaica", data: "J" }];
     const options = {
       onSelect() {},
@@ -63,14 +64,15 @@ describe("Select on Space", function () {
     input.value = "Jamaica";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     helpers.keydown(input, 32); // code of space
 
-    expect(options.onSelect.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), true);
   });
 
-  it("Should NOT trigger when triggerSelectOnSpace = false", function () {
+  it("Should NOT trigger when triggerSelectOnSpace = false", async () => {
     const suggestions = [{ value: "Jamaica", data: "J" }];
     const options = {
       triggerSelectOnSpace: false,
@@ -83,6 +85,7 @@ describe("Select on Space", function () {
     input.value = "Jam";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     instance.selectedIndex = 0;
     helpers.keydown(input, 32); // code of space
@@ -90,7 +93,7 @@ describe("Select on Space", function () {
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should keep SPACE if selecting has been caused by space", function () {
+  it("Should keep SPACE if selecting has been caused by space", async () => {
     const suggestions = [
       {
         value: "name",
@@ -109,11 +112,12 @@ describe("Select on Space", function () {
     input.value = "name";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     instance.selectedIndex = 0;
     helpers.keydown(input, 32);
 
-    expect(options.onSelect.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(input.value).toEqual("name ");
   });
 });

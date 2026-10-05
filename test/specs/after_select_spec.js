@@ -28,7 +28,7 @@ describe("After selecting", function () {
     input.remove();
   });
 
-  it("Should hide dropdown if received suggestions contains only one suggestion equal to current", function () {
+  it("Should hide dropdown if received suggestions contains only one suggestion equal to current", async () => {
     const suggestions = [
       {
         value: "Some value",
@@ -40,6 +40,7 @@ describe("After selecting", function () {
     input.value = "S";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     spyOn(instance, "hide");
 
@@ -50,10 +51,10 @@ describe("After selecting", function () {
     // list is waiting for being updated
     server.respond(helpers.responseFor(suggestions));
 
-    expect(instance.hide).toHaveBeenCalled();
+    await expect.poll(() => instance.hide).toHaveBeenCalled();
   });
 
-  it("Should hide dropdown if selected NAME suggestion with all fields filled", function () {
+  it("Should hide dropdown if selected NAME suggestion with all fields filled", async () => {
     const suggestions = [
       {
         value: "Surname Name Patronymic",
@@ -69,6 +70,7 @@ describe("After selecting", function () {
     input.value = "S";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     spyOn(instance, "getSuggestions");
     spyOn(instance, "hide");
@@ -76,11 +78,11 @@ describe("After selecting", function () {
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
+    await expect.poll(() => instance.hide).toHaveBeenCalled();
     expect(instance.getSuggestions).not.toHaveBeenCalled();
-    expect(instance.hide).toHaveBeenCalled();
   });
 
-  it("Should hide dropdown if selected NAME suggestion with name and surname filled for IOF", function () {
+  it("Should hide dropdown if selected NAME suggestion with name and surname filled for IOF", async () => {
     const suggestions = [
       {
         value: "Николай Александрович",
@@ -96,6 +98,7 @@ describe("After selecting", function () {
     input.value = "Н";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     spyOn(instance, "getSuggestions");
     spyOn(instance, "hide");
@@ -103,11 +106,11 @@ describe("After selecting", function () {
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
+    await expect.poll(() => instance.hide).toHaveBeenCalled();
     expect(instance.getSuggestions).not.toHaveBeenCalled();
-    expect(instance.hide).toHaveBeenCalled();
   });
 
-  it("Should hide dropdown if selected ADDRESS suggestion with `house` field filled", function () {
+  it("Should hide dropdown if selected ADDRESS suggestion with `house` field filled", async () => {
     const suggestions = [
       {
         value: "Россия, г Москва, ул Арбат, дом 10",
@@ -132,6 +135,7 @@ describe("After selecting", function () {
     input.value = "Р";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     spyOn(instance, "getSuggestions");
     spyOn(instance, "hide");
@@ -139,11 +143,11 @@ describe("After selecting", function () {
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
+    await expect.poll(() => instance.hide).toHaveBeenCalled();
     expect(instance.getSuggestions).not.toHaveBeenCalled();
-    expect(instance.hide).toHaveBeenCalled();
   });
 
-  it("Should do nothing if select same suggestion twice", function () {
+  it("Should do nothing if select same suggestion twice", async () => {
     const suggestion = {
       value: "Some value",
       data: {},
@@ -160,6 +164,7 @@ describe("After selecting", function () {
     input.value = "S";
     instance.onValueChange();
     server.respond(helpers.responseFor([suggestion]));
+    await expect.poll(() => instance.visible).toBe(true);
 
     instance.setSuggestion(suggestion);
 
@@ -167,10 +172,11 @@ describe("After selecting", function () {
     instance.selectedIndex = 0;
     helpers.hitEnter(input);
 
+    await expect.poll(() => instance.visible).toBe(false);
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 
-  it("Should show hint if no suggestions received", function () {
+  it("Should show hint if no suggestions received", async () => {
     const suggestions = [];
 
     instance.setOptions({
@@ -183,6 +189,7 @@ describe("After selecting", function () {
     input.value = "Р";
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     const hints = instance.container.querySelectorAll(".suggestions-hint");
     expect(hints.length).toEqual(1);

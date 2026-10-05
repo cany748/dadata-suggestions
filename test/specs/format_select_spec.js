@@ -28,7 +28,7 @@ describe("Text to insert after selection", function () {
     server.restore();
   });
 
-  it("Should invoke formatSelected callback", function () {
+  it("Should invoke formatSelected callback", async () => {
     instance.setOptions({
       formatSelected(suggestion) {
         return suggestion.data.customValue;
@@ -46,12 +46,13 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
-    instance.select(0);
+    await expect.poll(() => instance.visible).toBe(true);
+    await instance.select(0);
 
     expect(input.value).toEqual("custom value ");
   });
 
-  it("Should use default value if formatSelected returns null", function () {
+  it("Should use default value if formatSelected returns null", async () => {
     instance.setOptions({
       formatSelected() {
         return null;
@@ -72,12 +73,13 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
-    instance.select(0);
+    await expect.poll(() => instance.visible).toBe(true);
+    await instance.select(0);
 
     expect(input.value).toEqual("Alex");
   });
 
-  it("Should not use default value if formatSelected returns empty string", function () {
+  it("Should not use default value if formatSelected returns empty string", async () => {
     instance.setOptions({
       formatSelected() {
         return "";
@@ -98,12 +100,13 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
-    instance.select(0);
+    await expect.poll(() => instance.visible).toBe(true);
+    await instance.select(0);
 
     expect(input.value).toEqual("");
   });
 
-  it("Should invoke type-specified formatSelected method", function () {
+  it("Should invoke type-specified formatSelected method", async () => {
     instance.setOptions({
       type: "BANK",
     });
@@ -123,6 +126,7 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
     instance.select(0);
     server.respond(
       helpers.responseFor([
@@ -139,10 +143,10 @@ describe("Text to insert after selection", function () {
       ]),
     );
 
-    expect(input.value).toEqual('АО "АЛЬФА-БАНК"');
+    await expect.poll(() => input.value).toEqual('АО "АЛЬФА-БАНК"');
   });
 
-  it("Should apply restriction to enriched suggestion", function () {
+  it("Should apply restriction to enriched suggestion", async () => {
     instance.setOptions({
       type: "ADDRESS",
       geoLocation: false,
@@ -190,6 +194,7 @@ describe("Text to insert after selection", function () {
         },
       ]),
     );
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
@@ -227,10 +232,10 @@ describe("Text to insert after selection", function () {
     );
 
     // Value must be restricted by plugin
-    expect(input.value).toEqual("ул Туристская ");
+    await expect.poll(() => input.value).toEqual("ул Туристская ");
   });
 
-  it("Should show only city if region equals to city", function () {
+  it("Should show only city if region equals to city", async () => {
     const suggestions = [
       {
         unrestricted_value: "г Москва",
@@ -268,16 +273,17 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(input.value).toEqual("г Москва");
+    await expect.poll(() => input.value).toEqual("г Москва");
   });
 
-  it("Should not include city district in constrained value (district from OKATO)", function () {
+  it("Should not include city district in constrained value (district from OKATO)", async () => {
     const suggestions = [
       {
         unrestricted_value: "г Москва, р-н Новокосино, ул Суздальская",
@@ -324,16 +330,17 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(input.value).toEqual("ул Суздальская ");
+    await expect.poll(() => input.value).toEqual("ул Суздальская ");
   });
 
-  it("Should not include city district in constrained value (district from FIAS)", function () {
+  it("Should not include city district in constrained value (district from FIAS)", async () => {
     const suggestions = [
       {
         value: "Краснодарский край, г Сочи, ул Лазурная",
@@ -389,16 +396,17 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(input.value).toEqual("ул Лазурная ");
+    await expect.poll(() => input.value).toEqual("ул Лазурная ");
   });
 
-  it("Should not include city district in bounded value (district from OKATO)", function () {
+  it("Should not include city district in bounded value (district from OKATO)", async () => {
     const suggestions = [
       {
         unrestricted_value: "г Москва, р-н Новокосино, ул Суздальская",
@@ -442,16 +450,17 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(input.value).toEqual("г Москва, ул Суздальская");
+    await expect.poll(() => input.value).toEqual("г Москва, ул Суздальская");
   });
 
-  it("Should not include city district in bounded value (district from FIAS)", function () {
+  it("Should not include city district in bounded value (district from FIAS)", async () => {
     const suggestions = [
       {
         value: "Краснодарский край, г Сочи, ул Лазурная",
@@ -501,16 +510,17 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor(suggestions));
 
     // Value must be restricted by plugin
-    expect(input.value).toEqual("г Сочи, ул Лазурная");
+    await expect.poll(() => input.value).toEqual("г Сочи, ул Лазурная");
   });
 
-  it("Should not include city district in bounded city-settlement parent (district from OKATO)", function () {
+  it("Should not include city district in bounded city-settlement parent (district from OKATO)", async () => {
     const suggestions = [
       {
         unrestricted_value: "Новосибирская обл, г Новосибирск, Заельцовский р-н, ул Вавилова",
@@ -582,18 +592,19 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor(suggestions));
 
-    expect(parentInput.value).toEqual("г Новосибирск");
+    await expect.poll(() => parentInput.value).toEqual("г Новосибирск");
 
     parentInstance.dispose();
     parentInput.remove();
   });
 
-  it("Should not include city district in bounded city-settlement parent (district from FIAS)", function () {
+  it("Should not include city district in bounded city-settlement parent (district from FIAS)", async () => {
     const suggestions = [
       {
         value: "Краснодарский край, г Сочи, ул Авиационная",
@@ -666,18 +677,19 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor(suggestions));
 
-    expect(parentInput.value).toEqual("г Сочи");
+    await expect.poll(() => parentInput.value).toEqual("г Сочи");
 
     parentInstance.dispose();
     parentInput.remove();
   });
 
-  it("Should include city district in constrained value for streets with same names", function () {
+  it("Should include city district in constrained value for streets with same names", async () => {
     // если в выпадашке есть данные с одинаковым value, то в input должен попасть район
     const suggestions = [
       {
@@ -749,15 +761,16 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(input.value).toEqual("р-н Девон, ул Вторая ");
+    await expect.poll(() => input.value).toEqual("р-н Девон, ул Вторая ");
   });
 
-  it("Should include city district in bounded value for streets with same names", function () {
+  it("Should include city district in bounded value for streets with same names", async () => {
     // если в выпадашке есть данные с одинаковым value, то в input должен попасть район
     const suggestions = [
       {
@@ -823,15 +836,16 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(input.value).toEqual("г Белебей, р-н Девон, ул Вторая");
+    await expect.poll(() => input.value).toEqual("г Белебей, р-н Девон, ул Вторая");
   });
 
-  it("Should include city district in unrestricted value for streets with same names", function () {
+  it("Should include city district in unrestricted value for streets with same names", async () => {
     // если в выпадашке есть данные с одинаковым value, то в input должен попасть unrestricted_value
     const suggestions = [
       {
@@ -871,15 +885,16 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(input.value).toEqual("респ Башкортостан, Белебеевский р-н, г Белебей, р-н Девон, ул Вторая ");
+    await expect.poll(() => input.value).toEqual("респ Башкортостан, Белебеевский р-н, г Белебей, р-н Девон, ул Вторая ");
   });
 
-  it("Should NOT include city district in constrained value for streets with same names IF unique street is selected", function () {
+  it("Should NOT include city district in constrained value for streets with same names IF unique street is selected", async () => {
     // если в выпадашке есть данные с одинаковым value, то в input должен попасть район
     const suggestions = [
       {
@@ -951,15 +966,16 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(input.value).toEqual("ул Вторая ");
+    await expect.poll(() => input.value).toEqual("ул Вторая ");
   });
 
-  it("Should NOT include city district in bounded value for streets with same names IF unique street is selected", function () {
+  it("Should NOT include city district in bounded value for streets with same names IF unique street is selected", async () => {
     // если в выпадашке есть данные с одинаковым value, то в input должен попасть район
     const suggestions = [
       {
@@ -1025,15 +1041,16 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(input.value).toEqual("г Белебей, ул Вторая");
+    await expect.poll(() => input.value).toEqual("г Белебей, ул Вторая");
   });
 
-  it("Should NOT include city district in unrestricted value for streets with same names IF unique street is selected", function () {
+  it("Should NOT include city district in unrestricted value for streets with same names IF unique street is selected", async () => {
     // если в выпадашке есть подсказки с одинаковым value, но выбрана подсказка с уникальным value,
     // то в input попадет просто value (не unrestricted_value)
     const suggestions = [
@@ -1074,15 +1091,16 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(input.value).toEqual("респ Башкортостан, г Белебей, пер Тукаевский 2-й ");
+    await expect.poll(() => input.value).toEqual("респ Башкортостан, г Белебей, пер Тукаевский 2-й ");
   });
 
-  it("Should include city district in single input", function () {
+  it("Should include city district in single input", async () => {
     // отдельное поле для внутригородского района
     // ожидаем появления в нем района
     const suggestions = [
@@ -1114,11 +1132,12 @@ describe("Text to insert after selection", function () {
 
     // Respond with suggestions with restricted values
     server.respond(helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
 
     // Selecting causes enrichment
     instance.select(0);
     server.respond(helpers.responseFor([suggestions[0]]));
 
-    expect(input.value).toEqual("Адлерский р-н");
+    await expect.poll(() => input.value).toEqual("Адлерский р-н");
   });
 });

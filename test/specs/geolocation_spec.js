@@ -84,7 +84,7 @@ describe("Geolocation", function () {
     expect(server.requests[1].url).toContain("iplocate/address");
   });
 
-  it("Should send location with request", function () {
+  it("Should send location with request", async () => {
     server.respond("GET", /iplocate\/address/, [
       200,
       { "Content-type": "application/json" },
@@ -98,6 +98,7 @@ describe("Geolocation", function () {
         },
       }),
     ]);
+    await expect.poll(() => instance.geoLocation).toBeTruthy();
 
     input.value = "A";
     instance.onValueChange();

@@ -54,7 +54,7 @@ describe("Nothing selected callback", function () {
     expect(options.onSelectNothing).toHaveBeenCalledWith("A");
   });
 
-  it("Should be triggered on ENTER pressed with no matching suggestion", function () {
+  it("Should be triggered on ENTER pressed with no matching suggestion", async () => {
     const options = {
       onSelectNothing() {},
     };
@@ -66,14 +66,15 @@ describe("Nothing selected callback", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures));
+    await expect.poll(() => instance.visible).toBe(true);
 
     helpers.hitEnter(input);
 
-    expect(options.onSelectNothing.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelectNothing.calls.count()).toEqual(1);
     expect(options.onSelectNothing).toHaveBeenCalledWith("A");
   });
 
-  it("Should be triggered when focus lost and no matching suggestion", function () {
+  it("Should be triggered when focus lost and no matching suggestion", async () => {
     const options = {
       onSelectNothing() {},
     };
@@ -85,10 +86,11 @@ describe("Nothing selected callback", function () {
     input.value = "A";
     instance.onValueChange();
     server.respond(helpers.responseFor(fixtures));
+    await expect.poll(() => instance.visible).toBe(true);
 
     helpers.fireBlur(input);
 
-    expect(options.onSelectNothing.calls.count()).toEqual(1);
+    await expect.poll(() => options.onSelectNothing.calls.count()).toEqual(1);
     expect(options.onSelectNothing).toHaveBeenCalledWith("A");
   });
 });
