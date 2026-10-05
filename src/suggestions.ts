@@ -1697,6 +1697,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     this.container = container;
 
+    // keep focus in the input when the container is floating outside of the wrapper
+    container.addEventListener("mousedown", (e) => e.preventDefault());
     container.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
       if (target.closest(".suggestions-suggestion")) {
@@ -1719,16 +1721,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   removeContainer() {
     if (this.options.floating && this.container) {
       this.container.remove();
-    }
-  }
-
-  setContainerOptions() {
-    const listener = (e: Event) => e.preventDefault();
-    if (this.container) {
-      this.container.removeEventListener("mousedown", listener);
-      if (this.options.floating) {
-        this.container.addEventListener("mousedown", listener);
-      }
     }
   }
 
@@ -2304,7 +2296,6 @@ notificator
   .on("requestParams", Suggestions.prototype.constructBoundsParams)
   .on("setOptions", Suggestions.prototype.checkStatus)
   .on("setOptions", checkLocation)
-  .on("setOptions", Suggestions.prototype.setContainerOptions)
   .on("setOptions", Suggestions.prototype.setupConstraints)
   .on("setOptions", Suggestions.prototype.setBoundsOptions);
 
