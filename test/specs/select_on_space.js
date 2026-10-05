@@ -121,3 +121,67 @@ describe("Select on Space", function () {
     expect(input.value).toEqual("name ");
   });
 });
+
+describe("Select on Space with keyboard", () => {
+  let input, instance, server;
+  const serviceUrl = "/some/url";
+  const suggestions = [
+    { value: "Afghanistan", data: "Af" },
+    { value: "Albania", data: "Al" },
+    { value: "Andorra", data: "An" },
+  ];
+
+  const keydown = (keyCode) => {
+    const event = new KeyboardEvent("keydown", { keyCode, which: keyCode, bubbles: true, cancelable: true });
+    input.dispatchEvent(event);
+    return event;
+  };
+  const type = (value) => {
+    input.value = value;
+    input.dispatchEvent(new Event("input"));
+  };
+  const suggestRequests = () => server.requests.filter((request) => request.url.includes("/suggest/"));
+  const queryOf = (request) => JSON.parse(request.requestBody).query;
+
+  const showSuggestions = async (options) => {
+    instance = new Suggestions(input, { serviceUrl, type: "country", deferRequestBy: 0, ...options });
+    helpers.returnGoodStatus(server);
+    type("A");
+    suggestRequests()[0].respond(...helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
+  };
+
+  beforeEach(() => {
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    input = document.createElement("input");
+    document.body.append(input);
+  });
+
+  afterEach(() => {
+    instance.dispose();
+    input.remove();
+    server.restore();
+  });
+
+  describe("SPACE with `triggerSelectOnSpace`", () => {
+    it("Should insert space and search further if nothing matched", async () => {
+      const onSelect = vi.fn();
+      await showSuggestions({ triggerSelectOnSpace: true, onSelect });
+
+      keydown(32);
+
+      await expect.poll(() => input.value).toEqual("A ");
+      expect(suggestRequests().map(queryOf)).toEqual(["A", "A "]);
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it("Should not intercept space typed in the middle of the value", async () => {
+      await showSuggestions({ triggerSelectOnSpace: true });
+      keydown(40);
+      input.setSelectionRange(0, 0);
+
+      expect(keydown(32).defaultPrevented).toBe(false);
+    });
+  });
+});

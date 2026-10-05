@@ -2,7 +2,7 @@ import { fakeServer } from "nise";
 import helpers from "../helpers";
 import { DEFAULT_OPTIONS, Suggestions } from "@/suggestions";
 
-describe.only("Initialization", function () {
+describe("Initialization", () => {
   let input, instance, server;
   const serviceUrl = "/some/url";
 

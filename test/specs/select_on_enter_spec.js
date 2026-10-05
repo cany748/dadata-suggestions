@@ -903,3 +903,64 @@ describe("Select on Enter", function () {
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 });
+
+describe("Select on Enter while typing", () => {
+  let input, instance, server;
+  const serviceUrl = "/some/url";
+  const fixtures = {
+    A: [
+      { value: "Afghanistan", data: "Af" },
+      { value: "Albania", data: "Al" },
+      { value: "Andorra", data: "An" },
+    ],
+    Al: [
+      { value: "Albania", data: "Al" },
+      { value: "Algeria", data: "Ag" },
+    ],
+  };
+
+  const type = (value) => {
+    input.value = value;
+    input.dispatchEvent(new Event("input"));
+  };
+  const suggestRequests = () => server.requests.filter((request) => request.url.includes("/suggest/"));
+  const queryOf = (request) => JSON.parse(request.requestBody).query;
+  const respondTo = (request, suggestions) => request.respond(...helpers.responseFor(suggestions));
+
+  const create = (options) => {
+    instance = new Suggestions(input, { serviceUrl, type: "country", ...options });
+    helpers.returnGoodStatus(server);
+  };
+
+  beforeEach(() => {
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    input = document.createElement("input");
+    document.body.append(input);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    instance.dispose();
+    input.remove();
+    server.restore();
+  });
+
+  it("Should search for the latest typed value when Enter is pressed before `deferRequestBy` elapsed", async () => {
+    const onSelect = vi.fn();
+    create({ deferRequestBy: 1000, onSelect });
+    input.value = "A";
+    instance.onValueChange();
+    respondTo(suggestRequests()[0], fixtures.A);
+    await expect.poll(() => instance.visible).toBe(true);
+
+    type("Algeria");
+    helpers.hitEnter(input);
+    expect(suggestRequests().map(queryOf)).toEqual(["A", "Algeria"]);
+    respondTo(suggestRequests()[1], fixtures.Al);
+
+    await expect.poll(() => onSelect.mock.calls.length).toBe(1);
+    expect(onSelect.mock.calls[0][0]).toEqual(expect.objectContaining({ value: "Algeria", data: "Ag" }));
+    expect(input.value).toEqual("Algeria");
+  });
+});

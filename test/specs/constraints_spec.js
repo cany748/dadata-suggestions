@@ -879,3 +879,141 @@ describe("Address constraints", function () {
     });
   });
 });
+
+describe("Parent and child controls", () => {
+  let parentInput, parentInstance, childInput, childInstance, server, onChildInvalidate;
+  const serviceUrl = "/some/url";
+  const tver = { value: "г Тверь", data: { city: "Тверь", city_type: "г", qc: 0 } };
+  const street = { value: "ул Советская", data: { street: "Советская", street_type: "ул" } };
+
+  const createInput = () => {
+    const input = document.createElement("input");
+    document.body.append(input);
+    return input;
+  };
+  const selectInParent = async (typedValue) => {
+    parentInput.value = typedValue;
+    parentInstance.onValueChange();
+    server.requests.at(-1).respond(...helpers.responseFor([tver]));
+    await expect.poll(() => parentInstance.visible).toBe(true);
+    await parentInstance.select(0);
+  };
+
+  beforeEach(() => {
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    parentInput = createInput();
+    childInput = createInput();
+    onChildInvalidate = vi.fn();
+    parentInstance = new Suggestions(parentInput, { serviceUrl, type: "ADDRESS", geoLocation: false });
+    childInstance = new Suggestions(childInput, {
+      serviceUrl,
+      type: "ADDRESS",
+      geoLocation: false,
+      constraints: parentInput,
+      onInvalidateSelection: onChildInvalidate,
+    });
+    helpers.returnGoodStatus(server);
+    childInstance.setSuggestion(street);
+  });
+
+  afterEach(() => {
+    childInstance.dispose();
+    parentInstance.dispose();
+    childInput.remove();
+    parentInput.remove();
+    server.restore();
+  });
+
+  it("Should clear child when another value is selected in parent", async () => {
+    await selectInParent("Тве");
+
+    expect(childInput.value).toEqual("");
+    expect(onChildInvalidate).toHaveBeenCalledWith(expect.objectContaining({ value: "ул Советская" }));
+  });
+  it("Should keep child when parent selection does not change parent value", async () => {
+    await selectInParent("г Тверь ");
+
+    expect(parentInstance.selection).toEqual(expect.objectContaining({ value: "г Тверь" }));
+    expect(childInput.value).toEqual("ул Советская");
+  });
+  it("Should clear child when parent selection is invalidated by editing", () => {
+    parentInstance.setSuggestion(tver);
+
+    parentInput.value = "г Тве";
+    parentInstance.onValueChange();
+
+    expect(childInput.value).toEqual("");
+    expect(onChildInvalidate).toHaveBeenCalledWith(expect.objectContaining({ value: "ул Советская" }));
+  });
+  it("Should clear child when parent is cleared", () => {
+    parentInstance.setSuggestion(tver);
+
+    parentInstance.clear();
+
+    expect(childInput.value).toEqual("");
+    expect(onChildInvalidate).toHaveBeenCalledWith(expect.objectContaining({ value: "ул Советская" }));
+  });
+  it.each([
+    ["CSS selector", () => "#parent-control"],
+    ["jQuery-like collection", () => [parentInput]],
+  ])("Should accept parent given as %s", (_, getConstraints) => {
+    parentInput.id = "parent-control";
+    const input = createInput();
+    const instance = new Suggestions(input, { serviceUrl, type: "ADDRESS", geoLocation: false, constraints: getConstraints() });
+    parentInstance.setSuggestion(tver);
+
+    input.value = "сов";
+    instance.onValueChange();
+    const { requestBody } = server.requests.at(-1);
+    instance.dispose();
+    input.remove();
+
+    expect(JSON.parse(requestBody).locations).toEqual([{ city: "Тверь" }]);
+  });
+  it("Should prepend parent value when fixing child data", () => {
+    parentInstance.setSuggestion(tver);
+    childInput.value = "советская";
+
+    childInstance.fixData();
+
+    expect(JSON.parse(server.requests.at(-1).requestBody).query).toEqual("г Тверь советская");
+  });
+});
+
+describe("Constraints options", () => {
+  let input, instance, server;
+  const serviceUrl = "/some/url";
+
+  const suggestRequests = () => server.requests.filter((request) => /\/(?:suggest|findById)\//.test(request.url));
+  const search = (value) => {
+    input.value = value;
+    instance.onValueChange();
+    return suggestRequests().at(-1);
+  };
+  const create = (options) => {
+    instance = new Suggestions(input, { serviceUrl, type: "country", geoLocation: false, ...options });
+    helpers.returnGoodStatus(server);
+  };
+
+  beforeEach(() => {
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    input = document.createElement("input");
+    document.body.append(input);
+  });
+
+  afterEach(() => {
+    instance?.dispose();
+    input.remove();
+    server.restore();
+  });
+
+  it("Should replace previous constraints on `setOptions`", () => {
+    create({ type: "ADDRESS", constraints: { locations: { region: "Москва" } } });
+
+    instance.setOptions({ constraints: { locations: { region: "Тверская" } } });
+
+    expect(JSON.parse(search("ул").requestBody).locations).toEqual([{ region: "Тверская" }]);
+  });
+});

@@ -139,3 +139,31 @@ describe("Element events", function () {
     await expect.poll(() => triggered).toBe(true);
   });
 });
+
+describe("Dispose", () => {
+  let input, server;
+
+  beforeEach(() => {
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    input = document.createElement("input");
+    document.body.append(input);
+  });
+
+  afterEach(() => {
+    input.remove();
+    server.restore();
+  });
+
+  // Bug: `unbindElementEvents` removes other functions than the bound handlers added by `bindElementEvents`
+  it.fails("Should stop sending requests on input after dispose", () => {
+    const instance = new Suggestions(input, { serviceUrl: "/some/url", type: "country", deferRequestBy: 0 });
+    helpers.returnGoodStatus(server);
+    instance.dispose();
+
+    input.value = "A";
+    input.dispatchEvent(new Event("input"));
+
+    expect(server.requests.filter((request) => request.url.includes("/suggest/"))).toHaveLength(0);
+  });
+});

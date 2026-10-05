@@ -287,3 +287,81 @@ describe("Enrich", function () {
     expect(server.requests.length).toEqual(0);
   });
 });
+
+describe("Enrichment flow", () => {
+  let input, instance, server, onSelect;
+  const serviceUrl = "/some/url";
+  const poorMoscow = { value: "г Москва", data: { city: "Москва", city_type: "г", qc: null } };
+  const richMoscow = { value: "г Москва", data: { city: "Москва", city_type: "г", city_fias_id: "0c5b", qc: 0 } };
+  const poorStreet = { value: "г Москва, ул Тверская", data: { city: "Москва", street: "Тверская", qc: null } };
+
+  const suggestRequests = () => server.requests.filter((request) => request.url.includes("/suggest/"));
+  const search = async (value, suggestions) => {
+    input.value = value;
+    instance.onValueChange();
+    suggestRequests()
+      .at(-1)
+      .respond(...helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
+  };
+
+  beforeEach(() => {
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    input = document.createElement("input");
+    document.body.append(input);
+    onSelect = vi.fn();
+    instance = new Suggestions(input, { serviceUrl, type: "ADDRESS", geoLocation: false, onSelect });
+    helpers.returnGoodStatus(server);
+  });
+
+  afterEach(() => {
+    instance.dispose();
+    input.remove();
+    server.restore();
+  });
+
+  it("Should select original suggestion if enrichment request failed", async () => {
+    await search("мос", [poorMoscow, poorStreet]);
+
+    const selecting = instance.select(0);
+    suggestRequests().at(-1).respond(500, {}, "");
+    await selecting;
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect.mock.calls[0][0].data).toEqual(poorMoscow.data);
+    expect(input.value).toEqual("г Москва ");
+    expect(input.nextElementSibling.firstElementChild.hasAttribute("disabled")).toBe(false);
+  });
+  it("Should reuse enriched suggestion when it comes again in later response", async () => {
+    await search("мос", [poorMoscow, poorStreet]);
+    const selecting = instance.select(0);
+    suggestRequests()
+      .at(-1)
+      .respond(...helpers.responseFor([richMoscow]));
+    await selecting;
+    const requestsCount = suggestRequests().length;
+
+    await search("г Москва", [poorMoscow, poorStreet]);
+    await instance.select(0);
+
+    expect(suggestRequests()).toHaveLength(requestsCount + 1);
+    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ data: richMoscow.data }), expect.anything());
+  });
+  // Bug: blur starts a second enrichment that aborts the first one, so `onSelect` gets the suggestion without enriched data
+  it.fails("Should keep enriched data when input loses focus while enrichment is in progress", async () => {
+    await search("мос", [poorMoscow, poorStreet]);
+    instance.selectedIndex = 0;
+    helpers.hitEnter(input);
+    await expect.poll(() => suggestRequests()).toHaveLength(2);
+
+    helpers.fireBlur(input);
+    await expect.poll(() => instance.visible).toBe(false);
+    for (const request of suggestRequests().slice(1)) {
+      if (!request.aborted) request.respond(...helpers.responseFor([richMoscow]));
+    }
+
+    await expect.poll(() => onSelect.mock.calls.length).toBeGreaterThan(0);
+    expect(onSelect.mock.calls.map(([suggestion]) => suggestion.data)).toEqual([richMoscow.data]);
+  });
+});

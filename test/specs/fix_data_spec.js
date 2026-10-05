@@ -39,3 +39,40 @@ describe("FixData", function () {
     expect(input.value).toEqual(value);
   });
 });
+
+describe("FixData without value", () => {
+  let input, instance, server;
+  const serviceUrl = "/some/url";
+
+  const suggestRequests = () => server.requests.filter((request) => /\/(?:suggest|findById)\//.test(request.url));
+  const create = (options) => {
+    instance = new Suggestions(input, { serviceUrl, type: "country", geoLocation: false, ...options });
+    helpers.returnGoodStatus(server);
+  };
+
+  beforeEach(() => {
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    input = document.createElement("input");
+    document.body.append(input);
+  });
+
+  afterEach(() => {
+    instance?.dispose();
+    input.remove();
+    server.restore();
+  });
+
+  it("Should trigger `suggestions-fixdata` without request when input is empty", async () => {
+    const onFixData = vi.fn();
+    create({});
+    input.addEventListener("suggestions-fixdata", onFixData);
+    input.value = "";
+
+    instance.fixData();
+
+    await expect.poll(() => onFixData.mock.calls.length).toBe(1);
+    expect(onFixData.mock.calls[0][0].detail).toBeNull();
+    expect(suggestRequests()).toHaveLength(0);
+  });
+});

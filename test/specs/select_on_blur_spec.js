@@ -135,3 +135,49 @@ describe("Select on blur", function () {
     expect(options.onSelect).not.toHaveBeenCalled();
   });
 });
+
+describe("Select on Blur after failed request", () => {
+  let input, instance, server, onSearchError;
+  const serviceUrl = "/some/url";
+  const suggestions = [
+    { value: "Afghanistan", data: "Af" },
+    { value: "Albania", data: "Al" },
+  ];
+
+  const suggestRequests = () => server.requests.filter((request) => request.url.includes("/suggest/"));
+  const search = (value) => {
+    input.value = value;
+    instance.onValueChange();
+    return suggestRequests().at(-1);
+  };
+
+  beforeEach(() => {
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    input = document.createElement("input");
+    document.body.append(input);
+    onSearchError = vi.fn();
+    instance = new Suggestions(input, { serviceUrl, type: "country", onSearchError });
+    helpers.returnGoodStatus(server);
+  });
+
+  afterEach(() => {
+    instance.dispose();
+    input.remove();
+    server.restore();
+  });
+
+  it("Should not select anything on blur when the last request failed", async () => {
+    const onSelect = vi.fn();
+    instance.setOptions({ onSelect });
+    search("A").respond(...helpers.responseFor(suggestions));
+    await expect.poll(() => instance.visible).toBe(true);
+    search("Albania").respond(500, {}, "");
+    await expect.poll(() => onSearchError.mock.calls.length).toBe(1);
+
+    helpers.fireBlur(input);
+
+    await expect.poll(() => instance.visible).toBe(false);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+});

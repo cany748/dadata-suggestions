@@ -160,3 +160,59 @@ describe("Geolocation", function () {
     expect(server.requests[1].requestBody).toContain('"locations_boost":[{"kladr_id":"77"},{"kladr_id":"50"}]');
   });
 });
+
+describe("Geolocation boost", () => {
+  let input, instance, server;
+  const serviceUrl = "/some/url";
+  const boost = '"locations_boost":[{"kladr_id":"7700000000000"}]';
+
+  const suggestRequests = () => server.requests.filter((request) => request.url.includes("/suggest/"));
+  const search = (value) => {
+    input.value = value;
+    instance.onValueChange();
+    return suggestRequests().at(-1);
+  };
+
+  beforeEach(async () => {
+    Suggestions.resetLocation();
+    Suggestions.resetTokens();
+    server = fakeServer.create();
+    input = document.createElement("input");
+    document.body.append(input);
+    instance = new Suggestions(input, { serviceUrl, type: "ADDRESS" });
+    const json = { "Content-type": "application/json" };
+    const requestTo = (path) => server.requests.find((request) => request.url.includes(path));
+    requestTo("/status/").respond(200, json, JSON.stringify({ search: true, enrich: true }));
+    requestTo("/iplocate/").respond(200, json, JSON.stringify({ location: { value: "1.2.3.4", data: { kladr_id: "7700000000000" } } }));
+    await expect.poll(() => search("A").requestBody).toContain(boost);
+  });
+
+  afterEach(() => {
+    instance.dispose();
+    input.remove();
+    server.restore();
+    Suggestions.resetTokens();
+    Suggestions.resetLocation();
+  });
+
+  // Bug: `setOptions` resets the detected location, and it is restored only in the next microtask
+  it.fails("Should keep detected location in request sent right after `setOptions`", () => {
+    instance.setOptions({ count: 3 });
+
+    expect(search("Ab").requestBody).toContain(boost);
+  });
+  // Bug: a new instance gets the already detected location only in the next microtask
+  it.fails("Should send detected location in the first request of an instance created later", () => {
+    const secondInput = document.createElement("input");
+    document.body.append(secondInput);
+    const second = new Suggestions(secondInput, { serviceUrl, type: "ADDRESS" });
+
+    secondInput.value = "B";
+    second.onValueChange();
+    const { requestBody } = suggestRequests().at(-1);
+    second.dispose();
+    secondInput.remove();
+
+    expect(requestBody).toContain(boost);
+  });
+});
