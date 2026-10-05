@@ -184,7 +184,7 @@ describe("Geolocation boost", () => {
     const requestTo = (path) => server.requests.find((request) => request.url.includes(path));
     requestTo("/status/").respond(200, json, JSON.stringify({ search: true, enrich: true }));
     requestTo("/iplocate/").respond(200, json, JSON.stringify({ location: { value: "1.2.3.4", data: { kladr_id: "7700000000000" } } }));
-    await expect.poll(() => search("A").requestBody).toContain(boost);
+    await expect.poll(() => instance.geoLocation).toEqual({ kladr_id: "7700000000000" });
   });
 
   afterEach(() => {
@@ -195,14 +195,13 @@ describe("Geolocation boost", () => {
     Suggestions.resetLocation();
   });
 
-  // Bug: `setOptions` resets the detected location, and it is restored only in the next microtask
-  it.fails("Should keep detected location in request sent right after `setOptions`", () => {
+  it("Should keep detected location in request sent right after `setOptions`", () => {
     instance.setOptions({ count: 3 });
 
     expect(search("Ab").requestBody).toContain(boost);
   });
-  // Bug: a new instance gets the already detected location only in the next microtask
-  it.fails("Should send detected location in the first request of an instance created later", () => {
+
+  it("Should send detected location in the first request of an instance created later", () => {
     const secondInput = document.createElement("input");
     document.body.append(secondInput);
     const second = new Suggestions(secondInput, { serviceUrl, type: "ADDRESS" });

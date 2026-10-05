@@ -2220,6 +2220,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 }
 
 let locationRequest;
+let detectedLocation: { kladr_id: string } | null = null;
 const defaultGeoLocation = true;
 
 Suggestions.getGeoLocation = () => {
@@ -2228,6 +2229,7 @@ Suggestions.getGeoLocation = () => {
 
 Suggestions.resetLocation = () => {
   locationRequest = null;
+  detectedLocation = null;
   DEFAULT_OPTIONS.geoLocation = defaultGeoLocation;
 };
 
@@ -2246,7 +2248,7 @@ function checkLocation(this: Suggestions) {
     return;
   }
 
-  that.geoLocation = null;
+  that.geoLocation = detectedLocation;
   if (isPlainObject(providedLocation) || Array.isArray(providedLocation)) {
     that.geoLocation = providedLocation;
     that.geoLocationValue = providedLocation;
@@ -2259,9 +2261,10 @@ function checkLocation(this: Suggestions) {
       (resp) => {
         const locationData = resp && resp.location && resp.location.data;
         if (locationData && locationData.kladr_id) {
-          that.geoLocation = {
+          detectedLocation = {
             kladr_id: locationData.kladr_id,
           };
+          that.geoLocation = detectedLocation;
         }
       },
       () => {},
