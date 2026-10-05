@@ -56,6 +56,15 @@ describe("Status features", function () {
     await expect.poll(() => options.onSearchError).toHaveBeenCalled();
   });
 
+  it("Should invoke `onSearchError` callback if status response is empty", async () => {
+    const onSearchError = vi.fn();
+    instance.setOptions({ onSearchError, token: "789" });
+
+    server.respond([200, { "Content-type": "application/json" }, "null"]);
+
+    await expect.poll(() => onSearchError).toHaveBeenCalledWith(null, expect.anything(), "error", "Service Unavailable");
+  });
+
   it("Should use url param (if it passed) instead of serviceUrl", function () {
     server.requests.length = 0;
     instance.setOptions({

@@ -874,7 +874,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
             resolver.reject();
           }
           if (!noCallbacks) {
-            options.onSearchComplete.call(that.element, query, response.suggestions);
+            options.onSearchComplete.call(that.element, query, response?.suggestions);
           }
         },
         ({ xhr: jqXHR, textStatus, errorThrown }: AjaxError) => {
@@ -1138,7 +1138,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     request.then(
       (status) => {
-        if (status.search) {
+        if (status?.search) {
           const plan = request.getResponseHeader("X-Plan");
           status.plan = plan;
           extend(that.status, status);

@@ -661,6 +661,16 @@ describe("Request errors", () => {
     expect(onSearchError.mock.calls[0][0]).toEqual("A");
     expect(onSearchError.mock.calls[0][2]).toEqual("error");
   });
+  it("Should complete search without suggestions when response body is empty", async () => {
+    const onSearchComplete = vi.fn();
+    instance.setOptions({ onSearchComplete });
+
+    search("A").respond(200, { "Content-type": "application/json" }, "null");
+
+    await expect.poll(() => onSearchComplete).toHaveBeenCalledWith("A", undefined);
+    expect(instance.visible).toBe(false);
+    expect(onSearchError).not.toHaveBeenCalled();
+  });
   it("Should report timeout to `onSearchError`", async () => {
     const request = search("A");
 
