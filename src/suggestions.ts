@@ -452,6 +452,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   public cachedResponse: Record<string, any>;
   public enrichmentCache: Record<string, any>;
   public abortController: AbortController;
+  public parentAbortController: AbortController | null;
   public fetchPhase: any;
   public enrichPhase: any;
   public onChangeTimeout: number | null;
@@ -486,6 +487,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     this.cachedResponse = {};
     this.enrichmentCache = {};
     this.abortController = new AbortController();
+    this.parentAbortController = null;
     this.fetchPhase = new Promise(() => {});
     this.enrichPhase = new Promise(() => {});
     this.onChangeTimeout = null;
@@ -1263,19 +1265,16 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   bindElementEvents() {
-    this.element.addEventListener("keydown", this.onElementKeyDown.bind(this));
-    this.element.addEventListener("keyup", this.onElementKeyUp.bind(this));
-    this.element.addEventListener("input", this.onElementKeyUp.bind(this));
-    this.element.addEventListener("blur", this.onElementBlur.bind(this));
-    this.element.addEventListener("focus", this.onElementFocus.bind(this));
+    const { signal } = this.abortController;
+    this.element.addEventListener("keydown", (e) => this.onElementKeyDown(e), { signal });
+    this.element.addEventListener("keyup", (e) => this.onElementKeyUp(e), { signal });
+    this.element.addEventListener("input", (e) => this.onElementKeyUp(e as KeyboardEvent), { signal });
+    this.element.addEventListener("blur", () => this.onElementBlur(), { signal });
+    this.element.addEventListener("focus", () => this.onElementFocus(), { signal });
   }
 
   unbindElementEvents() {
-    this.element.removeEventListener("keydown", this.onElementKeyDown);
-    this.element.removeEventListener("keyup", this.onElementKeyUp);
-    this.element.removeEventListener("input", this.onElementKeyUp);
-    this.element.removeEventListener("blur", this.onElementBlur);
-    this.element.removeEventListener("focus", this.onElementFocus);
+    this.abortController.abort();
   }
 
   onElementBlur() {
@@ -2003,6 +2002,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     if (!constraints) {
       that.unbindFromParent();
+      that.constraints = {};
       return;
     }
 
@@ -2026,9 +2026,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       }
     } else {
       // Constraint is an object or array of objects
-      for (const key of Object.keys(that.constraints)) {
-        delete that.constraints[key];
-      }
+      that.unbindFromParent();
+      that.constraints = {};
       for (const constraint of Array.isArray(constraints) ? constraints : [constraints]) {
         that.addConstraint(constraint);
       }
@@ -2127,28 +2126,30 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     const parentEl = this.constraints as HTMLElement;
     if (!parentEl) return;
 
-    parentEl.addEventListener("suggestions-select", (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      const valueChanged = detail?.[1];
-      // Don't clear if parent has been just enriched
-      if (valueChanged) {
-        this.clear();
-      }
-    });
+    this.parentAbortController = new AbortController();
+    const { signal } = this.parentAbortController;
 
-    parentEl.addEventListener("suggestions-invalidateselection", this.clear.bind(this));
-    parentEl.addEventListener("suggestions-clear", this.clear.bind(this));
-    parentEl.addEventListener("suggestions-dispose", this.onParentDispose.bind(this));
+    parentEl.addEventListener(
+      "suggestions-select",
+      (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        const valueChanged = detail?.[1];
+        // Don't clear if parent has been just enriched
+        if (valueChanged) {
+          this.clear();
+        }
+      },
+      { signal },
+    );
+
+    parentEl.addEventListener("suggestions-invalidateselection", () => this.clear(), { signal });
+    parentEl.addEventListener("suggestions-clear", () => this.clear(), { signal });
+    parentEl.addEventListener("suggestions-dispose", () => this.onParentDispose(), { signal });
   }
 
   unbindFromParent() {
-    const that = this;
-    const parentEl = that.constraints as HTMLElement;
-
-    if (parentEl instanceof HTMLElement) {
-      // TODO:
-      // off(parentEl, `.${that.uniqueId}`);
-    }
+    this.parentAbortController?.abort();
+    this.parentAbortController = null;
   }
 
   onParentDispose() {

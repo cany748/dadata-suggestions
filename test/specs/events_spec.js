@@ -141,23 +141,27 @@ describe("Element events", function () {
 });
 
 describe("Dispose", () => {
-  let input, server;
+  let input, server, parentInput, parentInstance;
+  const serviceUrl = "/some/url";
 
   beforeEach(() => {
     Suggestions.resetTokens();
     server = fakeServer.create();
     input = document.createElement("input");
-    document.body.append(input);
+    parentInput = document.createElement("input");
+    document.body.append(input, parentInput);
+    parentInstance = new Suggestions(parentInput, { serviceUrl, type: "ADDRESS", geoLocation: false });
   });
 
   afterEach(() => {
+    parentInstance.dispose();
+    parentInput.remove();
     input.remove();
     server.restore();
   });
 
-  // Bug: `unbindElementEvents` removes other functions than the bound handlers added by `bindElementEvents`
-  it.fails("Should stop sending requests on input after dispose", () => {
-    const instance = new Suggestions(input, { serviceUrl: "/some/url", type: "country", deferRequestBy: 0 });
+  it("Should stop sending requests on input after dispose", () => {
+    const instance = new Suggestions(input, { serviceUrl, type: "country", deferRequestBy: 0 });
     helpers.returnGoodStatus(server);
     instance.dispose();
 
@@ -165,5 +169,26 @@ describe("Dispose", () => {
     input.dispatchEvent(new Event("input"));
 
     expect(server.requests.filter((request) => request.url.includes("/suggest/"))).toHaveLength(0);
+  });
+
+  it("Should stop listening to parent after dispose", () => {
+    const instance = new Suggestions(input, { serviceUrl, type: "ADDRESS", geoLocation: false, constraints: parentInput });
+    instance.dispose();
+    input.value = "Value";
+
+    parentInstance.clear();
+
+    expect(input.value).toEqual("Value");
+  });
+
+  it("Should stop listening to previous parent after constraints are removed", () => {
+    const instance = new Suggestions(input, { serviceUrl, type: "ADDRESS", geoLocation: false, constraints: parentInput });
+    instance.setOptions({ constraints: null });
+    input.value = "Value";
+
+    parentInstance.clear();
+
+    expect(input.value).toEqual("Value");
+    instance.dispose();
   });
 });
