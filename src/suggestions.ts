@@ -1,14 +1,4 @@
-import {
-  buildCacheKey,
-  generateId,
-  highlightMatches,
-  isPlainObject,
-  makeSuggestionLabel,
-  objectsEqual,
-  serialize,
-  trigger,
-  withResolvers,
-} from "./utils";
+import { buildCacheKey, generateId, highlightMatches, isPlainObject, makeSuggestionLabel, objectsEqual, serialize, trigger } from "./utils";
 import { CLASSES, DATA_ATTR_KEY, KEYS } from "./constants";
 
 import { ADDRESS_TYPE } from "./types/address";
@@ -153,6 +143,8 @@ const requestModes = {
 };
 
 let statusRequests = {} as Record<string, any>;
+let locationRequest;
+let detectedLocation: { kladr_id: string } | null = null;
 
 const fiasParamNames = [
   "country_iso_code",
@@ -473,7 +465,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     }
 
     this.checkStatus();
-    checkLocation(this);
+    this.checkLocation();
     this.setupConstraints();
     this.setBoundsOptions();
   }
@@ -545,10 +537,19 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   fixData() {
     const fullQuery = this.extendedCurrentValue();
     const currentValue = this.element.value;
-    const resolver = withResolvers<any>();
+    let request: Promise<any[] | undefined> = Promise.resolve();
+    if (this.isQueryRequestable(fullQuery)) {
+      this.currentValue = fullQuery;
+      request = this.getSuggestions(fullQuery, {
+        count: 1,
+        from_bound: null,
+        to_bound: null,
+      });
+    }
 
-    resolver.promise.then(
-      (suggestion) => {
+    request.then((suggestions) => {
+      const suggestion = suggestions?.[0];
+      if (suggestion) {
         this.selectSuggestion(suggestion, 0, currentValue, {
           hasBeenEnriched: true,
         });
@@ -556,37 +557,11 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
           this.element.value = currentValue;
         }
         trigger(this.element, "suggestions-fixdata", [suggestion]);
-      },
-      () => {
+      } else {
         this.selection = null;
         trigger(this.element, "suggestions-fixdata");
-      },
-    );
-
-    if (this.isQueryRequestable(fullQuery)) {
-      this.currentValue = fullQuery;
-      this.getSuggestions(fullQuery, {
-        count: 1,
-        from_bound: null,
-        to_bound: null,
-      }).then(
-        (suggestions) => {
-          // data fetched
-          const suggestion = suggestions[0];
-          if (suggestion) {
-            resolver.resolve(suggestion);
-          } else {
-            resolver.reject();
-          }
-        },
-        () => {
-          // no data fetched
-          resolver.reject();
-        },
-      );
-    } else {
-      resolver.reject();
-    }
+      }
+    });
   }
 
   // Querying related methods
@@ -657,7 +632,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     const options = this.options;
     const params = typeof options.params === "function" ? options.params.call(this.element, query) : { ...options.params };
 
-    Object.assign(params, constructParams(this), this.constructConstraintsParams(), this.constructBoundsParams());
+    Object.assign(params, this.constructLocationParams(), this.constructConstraintsParams(), this.constructBoundsParams());
     params[options.paramName] = query;
     if (!Number.isNaN(Number.parseFloat(options.count)) && Number.isFinite(options.count) && options.count > 0) {
       params.count = options.count;
@@ -670,13 +645,12 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   updateSuggestions(query) {
-    this.fetchPhase = this.getSuggestions(query);
-    this.fetchPhase.then(
-      (suggestions) => {
+    this.fetchPhase = this.getSuggestions(query).then((suggestions) => {
+      if (suggestions) {
         this.assignSuggestions(suggestions, query);
-      },
-      () => {},
-    );
+      }
+      return suggestions;
+    });
   }
 
   /**
@@ -686,59 +660,59 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @param {Object} requestOptions
    * @param {Boolean} [requestOptions.noCallbacks]  flag, request competence callbacks will not be invoked
    * @param {Boolean} [requestOptions.useEnrichmentCache]
-   * @return {} waiter which is to be resolved with suggestions as argument
+   * @return suggestions or `undefined` if nothing was fetched
    */
-  getSuggestions(query: string, customParams?: object, requestOptions?: object) {
+  async getSuggestions(query: string, customParams?: object, requestOptions?: object) {
     const options = this.options;
     const noCallbacks = requestOptions && requestOptions.noCallbacks;
     const useEnrichmentCache = requestOptions && requestOptions.useEnrichmentCache;
     const method = (requestOptions && requestOptions.method) || this.requestMode.method;
     const params = this.constructRequestParams(query, customParams);
     const cacheKey = buildCacheKey(params);
-    const resolver = withResolvers<any>();
 
-    const response = this.cachedResponse[cacheKey];
-    if (response && Array.isArray(response.suggestions)) {
-      resolver.resolve(response.suggestions);
-    } else if (this.isBadQuery(query)) {
-      resolver.reject();
-    } else if (!noCallbacks && options.onSearchStart.call(this.element, params) === false) {
-      resolver.reject();
-    } else {
-      this.doGetSuggestions(params, method).then(
-        ({ data: response }) => {
-          // if response is correct and current value has not been changed
-          if (this.processResponse(response) && query == this.currentValue) {
-            // Cache results if cache is not disabled:
-            if (!options.noCache) {
-              if (useEnrichmentCache) {
-                this.enrichmentCache[query] = response.suggestions[0];
-              } else {
-                this.enrichResponse(response, query);
-                this.cachedResponse[cacheKey] = response;
-                if (options.preventBadQueries && response.suggestions.length === 0) {
-                  this.badQueries.push(query);
-                }
-              }
-            }
-
-            resolver.resolve(response.suggestions);
-          } else {
-            resolver.reject();
-          }
-          if (!noCallbacks) {
-            options.onSearchComplete.call(this.element, query, response?.suggestions);
-          }
-        },
-        (error) => {
-          resolver.reject();
-          if (!noCallbacks && !isAbortError(error)) {
-            options.onSearchError.call(this.element, query, error);
-          }
-        },
-      );
+    const cached = this.cachedResponse[cacheKey];
+    if (cached && Array.isArray(cached.suggestions)) {
+      return cached.suggestions;
     }
-    return resolver.promise;
+    if (this.isBadQuery(query)) {
+      return;
+    }
+    if (!noCallbacks && options.onSearchStart.call(this.element, params) === false) {
+      return;
+    }
+
+    let response;
+    try {
+      ({ data: response } = await this.doGetSuggestions(params, method));
+    } catch (error) {
+      if (!noCallbacks && !isAbortError(error)) {
+        options.onSearchError.call(this.element, query, error);
+      }
+      return;
+    }
+
+    let suggestions;
+    // if response is correct and current value has not been changed
+    if (this.processResponse(response) && query === this.currentValue) {
+      // Cache results if cache is not disabled:
+      if (!options.noCache) {
+        if (useEnrichmentCache) {
+          this.enrichmentCache[query] = response.suggestions[0];
+        } else {
+          this.enrichResponse(response, query);
+          this.cachedResponse[cacheKey] = response;
+          if (options.preventBadQueries && response.suggestions.length === 0) {
+            this.badQueries.push(query);
+          }
+        }
+      }
+
+      suggestions = response.suggestions;
+    }
+    if (!noCallbacks) {
+      options.onSearchComplete.call(this.element, query, response?.suggestions);
+    }
+    return suggestions;
   }
 
   doGetSuggestions(params: object, method: string) {
@@ -893,22 +867,21 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     return this.options.noSuggestionsHint || this.type.noSuggestionsHint;
   }
 
-  enrichSuggestion(this: Suggestions, suggestion, selectionOptions) {
+  async enrichSuggestion(suggestion, selectionOptions): Promise<[any, boolean?]> {
     if (
       !this.options.enrichmentEnabled ||
       !this.type.enrichmentEnabled ||
       !this.requestMode.enrichmentEnabled ||
       (selectionOptions && selectionOptions.dontEnrich)
     ) {
-      return Promise.resolve([suggestion]);
+      return [suggestion];
     }
 
     // if current suggestion is already enriched, use it
     if (suggestion.data && suggestion.data.qc != null) {
-      return Promise.resolve([suggestion]);
+      return [suggestion];
     }
 
-    const resolver = withResolvers<[any, boolean?]>();
     this.disableDropdown();
 
     const query = this.type.getEnrichmentQuery(suggestion);
@@ -922,22 +895,15 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     // Set `currentValue` to make `processResponse` to consider enrichment response valid
     this.currentValue = query;
 
-    this.getSuggestions(query, customParams, requestOptions)
-      .finally(() => {
-        this.enableDropdown();
-      })
-      .then(
-        (suggestions) => {
-          const enrichedSuggestion = suggestions && suggestions[0];
+    let suggestions;
+    try {
+      suggestions = await this.getSuggestions(query, customParams, requestOptions);
+    } finally {
+      this.enableDropdown();
+    }
 
-          resolver.resolve([enrichedSuggestion || suggestion, !!enrichedSuggestion]);
-        },
-        () => {
-          resolver.resolve([suggestion]);
-        },
-      );
-
-    return resolver.promise;
+    const enrichedSuggestion = suggestions?.[0];
+    return enrichedSuggestion ? [enrichedSuggestion, true] : [suggestion];
   }
 
   /**
@@ -996,6 +962,47 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
         triggerError(error);
       },
     );
+  }
+
+  checkLocation() {
+    const providedLocation = this.options.geoLocation;
+
+    if (!this.type.geoEnabled || !providedLocation) {
+      return;
+    }
+
+    this.geoLocation = detectedLocation;
+    if (isPlainObject(providedLocation) || Array.isArray(providedLocation)) {
+      this.geoLocation = providedLocation;
+    } else {
+      if (!locationRequest) {
+        locationRequest = this.request("iplocate/address");
+      }
+
+      locationRequest.then(
+        ({ data: resp }) => {
+          const locationData = resp && resp.location && resp.location.data;
+          if (locationData && locationData.kladr_id) {
+            detectedLocation = {
+              kladr_id: locationData.kladr_id,
+            };
+            this.geoLocation = detectedLocation;
+          }
+        },
+        () => {},
+      );
+    }
+  }
+
+  constructLocationParams() {
+    const params = {};
+
+    if (this.geoLocation) {
+      const locationData = this.geoLocation;
+      params.locations_boost = Array.isArray(locationData) ? locationData : [locationData];
+    }
+
+    return params;
   }
 
   setupBounds(this: Suggestions) {
@@ -1124,12 +1131,10 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     // dropdown is disabled while selected suggestion is being enriched,
     // selecting again would abort the enrichment
     if (this.options.triggerSelectOnBlur && !this.dropdownDisabled) {
-      this.selectCurrentValue({ noSpace: true })
-        .catch(() => {})
-        .finally(() => {
-          // For NAMEs selecting keeps suggestions list visible, so hide it
-          this.hide();
-        });
+      this.selectCurrentValue({ noSpace: true }).finally(() => {
+        // For NAMEs selecting keeps suggestions list visible, so hide it
+        this.hide();
+      });
     } else {
       this.hide();
     }
@@ -1181,7 +1186,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
       case KEYS.ENTER: {
         if (this.options.triggerSelectOnEnter) {
-          this.selectCurrentValue().catch(() => {});
+          this.selectCurrentValue();
         }
         break;
       }
@@ -1192,11 +1197,13 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
           this.selectCurrentValue({
             continueSelecting: true,
             dontEnrich: true,
-          }).catch(() => {
+          }).then((index) => {
             // If all data fetched but nothing selected
-            this.currentValue += " ";
-            this.element.value = this.currentValue;
-            this.proceedChangedValue();
+            if (index === -1) {
+              this.currentValue += " ";
+              this.element.value = this.currentValue;
+              this.proceedChangedValue();
+            }
           });
         }
         return;
@@ -1305,11 +1312,9 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   /**
    * Selects current or first matched suggestion, but firstly waits for data ready
    * @param selectionOptions
-   * @returns {} promise, resolved with index of selected suggestion or rejected if nothing matched
+   * @returns index of selected suggestion or -1 if nothing matched
    */
-  selectCurrentValue(selectionOptions) {
-    const result = withResolvers<number>();
-
+  async selectCurrentValue(selectionOptions?) {
     // force onValueChange to be executed if it has been deferred
     if (this.onChangeTimeout) {
       clearTimeout(this.onChangeTimeout);
@@ -1317,31 +1322,16 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       this.onValueChange();
     }
 
-    this.fetchPhase.then(
-      () => {
-        let index;
+    const suggestions = await this.fetchPhase;
 
-        // When suggestion has already been selected and not modified
-        if (this.selection && !this.visible) {
-          result.reject();
-        } else {
-          index = this.findSuggestionIndex();
+    // When suggestion has already been selected and not modified
+    if (!suggestions || (this.selection && !this.visible)) {
+      return -1;
+    }
 
-          this.select(index, selectionOptions);
-
-          if (index === -1) {
-            result.reject();
-          } else {
-            result.resolve(index);
-          }
-        }
-      },
-      () => {
-        result.reject();
-      },
-    );
-
-    return result.promise;
+    const index = this.findSuggestionIndex();
+    this.select(index, selectionOptions);
+    return index;
   }
 
   /**
@@ -1381,7 +1371,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @param {boolean} [selectionOptions.continueSelecting]  prevents hiding after selection
    * @param {boolean} [selectionOptions.noSpace]  prevents adding space at the end of current value
    */
-  select(index, selectionOptions) {
+  async select(index, selectionOptions?) {
     const suggestion = this.suggestions[index];
     const continueSelecting = selectionOptions && selectionOptions.continueSelecting;
     const currentValue = this.currentValue;
@@ -1400,10 +1390,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     const hasSameValues = this.hasSameValues(suggestion);
 
-    return this.enrichSuggestion(suggestion, selectionOptions).then(([enrichedSuggestion, hasBeenEnriched]) => {
-      const newSelectionOptions = { hasBeenEnriched, hasSameValues, ...selectionOptions };
-      this.selectSuggestion(enrichedSuggestion, index, currentValue, newSelectionOptions);
-    });
+    const [enrichedSuggestion, hasBeenEnriched] = await this.enrichSuggestion(suggestion, selectionOptions);
+    this.selectSuggestion(enrichedSuggestion, index, currentValue, { hasBeenEnriched, hasSameValues, ...selectionOptions });
   }
 
   /**
@@ -1956,8 +1944,6 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 }
 
-let locationRequest;
-let detectedLocation: { kladr_id: string } | null = null;
 const defaultGeoLocation = true;
 
 Suggestions.resetLocation = () => {
@@ -1971,47 +1957,6 @@ Suggestions.resetTokens = () => {
     req.abort();
   }
   statusRequests = {};
-};
-
-const checkLocation = (instance: Suggestions) => {
-  const providedLocation = instance.options.geoLocation;
-
-  if (!instance.type.geoEnabled || !providedLocation) {
-    return;
-  }
-
-  instance.geoLocation = detectedLocation;
-  if (isPlainObject(providedLocation) || Array.isArray(providedLocation)) {
-    instance.geoLocation = providedLocation;
-  } else {
-    if (!locationRequest) {
-      locationRequest = instance.request("iplocate/address");
-    }
-
-    locationRequest.then(
-      ({ data: resp }) => {
-        const locationData = resp && resp.location && resp.location.data;
-        if (locationData && locationData.kladr_id) {
-          detectedLocation = {
-            kladr_id: locationData.kladr_id,
-          };
-          instance.geoLocation = detectedLocation;
-        }
-      },
-      () => {},
-    );
-  }
-};
-
-const constructParams = (instance: Suggestions) => {
-  const params = {};
-
-  if (instance.geoLocation) {
-    const locationData = instance.geoLocation;
-    params.locations_boost = Array.isArray(locationData) ? locationData : [locationData];
-  }
-
-  return params;
 };
 
 Suggestions.ConstraintLocation = ConstraintLocation;

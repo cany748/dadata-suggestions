@@ -55,16 +55,6 @@ export const serialize = (data: any) => {
   return JSON.stringify(data, (_, value) => (value === null ? undefined : value));
 };
 
-export const withResolvers = <T>() => {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-};
-
 export const buildCacheKey = (params = {} as Record<string, any>) => {
   const keys = Object.keys(params).sort();
   return keys.map((key) => `${key}=${JSON.stringify(params[key])}`).join("&");
