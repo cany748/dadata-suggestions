@@ -6,8 +6,8 @@ import type { Suggestion, SuggestionAny } from "./types";
  * @param preprocessFn called on each value before comparison
  * @returns {Function} same parent checker function
  */
-function sameParentChecker(preprocessFn: (val: any) => any) {
-  return function (suggestions: any[]) {
+const sameParentChecker = (preprocessFn: (val: any) => any) => {
+  return (suggestions: any[]) => {
     if (suggestions.length === 0) {
       return false;
     }
@@ -16,19 +16,19 @@ function sameParentChecker(preprocessFn: (val: any) => any) {
     }
 
     const parentValue = preprocessFn(suggestions[0].value);
-    const aliens = suggestions.filter(function (suggestion) {
+    const aliens = suggestions.filter((suggestion) => {
       return !preprocessFn(suggestion.value).startsWith(parentValue);
     });
 
     return aliens.length === 0;
   };
-}
+};
 
 /**
  * Default same parent checker. Compares raw values.
  * @type {Function}
  */
-const haveSameParent = sameParentChecker(function (val) {
+const haveSameParent = sameParentChecker((val) => {
   return val;
 });
 
@@ -40,8 +40,8 @@ const haveSameParent = sameParentChecker(function (val) {
  * Возвращает индекс единственной подходящей подсказки
  * или -1, если подходящих нет или несколько.
  */
-function _matchByWords(stopwords: string[], parentCheckerFn: (suggestions: any[]) => boolean) {
-  return function (query: string, suggestions: any[]) {
+const _matchByWords = (stopwords: string[], parentCheckerFn: (suggestions: any[]) => boolean) => {
+  return (query: string, suggestions: any[]) => {
     let queryTokens;
     const matches = [];
 
@@ -65,29 +65,29 @@ function _matchByWords(stopwords: string[], parentCheckerFn: (suggestions: any[]
 
     return matches.length === 1 ? matches[0] : -1;
   };
-}
+};
 
 /**
  * Разность массивов с частичным совпадением элементов.
  * Если элемент второго массива включает в себя элемент первого,
  * элементы считаются равными.
  */
-function minusWithPartialMatching(array1: string[], array2: string[]) {
+const minusWithPartialMatching = (array1: string[], array2: string[]) => {
   if (!array2 || array2.length === 0) {
     return array1;
   }
-  return array1.filter(function (el) {
-    return !array2.some(function (el2) {
+  return array1.filter((el) => {
+    return !array2.some((el2) => {
       return el2.startsWith(el);
     });
   });
-}
+};
 /**
  * Вырезает из строки стоп-слова
  */
-function normalize(str: string, stopwords?: string[]) {
+const normalize = (str: string, stopwords?: string[]) => {
   return split(str, stopwords).join(" ");
-}
+};
 
 /**
  * Matchers return index of suitable suggestion
@@ -98,7 +98,7 @@ const matchers = {
    * Matches query against suggestions, removing all the stopwords.
    */
   matchByNormalizedQuery(stopwords?: string[]) {
-    return function (query: string, suggestions: any[]) {
+    return (query: string, suggestions: any[]) => {
       const normalizedQuery = normalize(query, stopwords);
       const matches = [];
 
@@ -139,7 +139,7 @@ const matchers = {
    *   "0445" vs { value: "ALFA-BANK", data: { "bic": "044525593" }} is a match
    */
   matchByFields<T extends Suggestion<SuggestionAny>>(fields: (((s: T) => string) | [(s: T) => string, string[]])[]) {
-    return function (query: string, suggestions: T[]) {
+    return (query: string, suggestions: T[]) => {
       const tokens = splitTokens(split(query));
       let suggestionWords: string[] = [];
 

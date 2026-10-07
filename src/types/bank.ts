@@ -19,12 +19,11 @@ const BANK_TYPE = {
   },
   geoEnabled: true,
   formatResult(value, currentValue, suggestion, options) {
-    const that = this;
     const formattedBIC = highlightMatches(suggestion.data?.bic, currentValue);
     let address = suggestion.data?.address?.value || "";
 
     value = highlightMatches(value, currentValue, options);
-    value = that.wrapFormattedValue(value, suggestion);
+    value = this.wrapFormattedValue(value, suggestion);
 
     if (address) {
       address = address.replace(/^\d{6}( РОССИЯ)?, /i, "");
@@ -38,7 +37,7 @@ const BANK_TYPE = {
 
     if (formattedBIC || address) {
       value +=
-        `<div class="${that.classes.subtext}">` + `<span class="${that.classes.subtext_inline}">${formattedBIC}</span>${address}</div>`;
+        `<div class="${this.classes.subtext}">` + `<span class="${this.classes.subtext_inline}">${formattedBIC}</span>${address}</div>`;
     }
     return value;
   },

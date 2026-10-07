@@ -1,59 +1,59 @@
 import { CLASSES, WORD_DELIMITERS, WORD_PARTS_DELIMITERS } from "./constants";
 
-export function trigger(element: EventTarget, eventName: string, detail?: any[]): void {
+export const trigger = (element: EventTarget, eventName: string, detail?: any[]): void => {
   const event = new CustomEvent(eventName, {
     bubbles: true,
     cancelable: true,
     detail,
   });
   element.dispatchEvent(event);
-}
+};
 
-export function isPlainObject(value: unknown) {
+export const isPlainObject = (value: unknown) => {
   if (typeof value !== "object" || value === null) return false;
   const proto = Object.getPrototypeOf(value);
   return proto === null || proto === Object.prototype;
-}
+};
 
 let idCounter = 0;
 /**
  * Возвращает автоинкрементный идентификатор.
  */
-export function generateId(prefix = "") {
+export const generateId = (prefix = "") => {
   return prefix + ++idCounter;
-}
+};
 
 /**
  * Эскейпирует символы RegExp-шаблона обратным слешем
  * (для передачи в конструктор регулярных выражений)
  */
-export function escapeRegExChars(value: string) {
+export const escapeRegExChars = (value: string) => {
   return value.replace(/[-[\]/{}()*+?.\\^$|]/g, String.raw`\$&`);
-}
+};
 
 /**
  * Приводит слово к нижнему регистру и заменяет ё → е
  */
-export function formatToken(token: string) {
+export const formatToken = (token: string) => {
   return token && token.toLowerCase().replace(/ё/gi, "е");
-}
+};
 
 /**
  * Разность массивов: ([1,2,3,4], [2,4,5,6]) => [1,3]
  * Исходные массивы не меняются.
  */
-export function arrayMinus(array1: string[], array2?: string[]) {
+export const arrayMinus = (array1: string[], array2?: string[]) => {
   if (!array2 || array2.length === 0) {
     return array1;
   }
-  return array1.filter(function (el) {
+  return array1.filter((el) => {
     return !array2.includes(el);
   });
-}
+};
 
-export function serialize(data: any) {
+export const serialize = (data: any) => {
   return JSON.stringify(data, (_, value) => (value === null ? undefined : value));
-}
+};
 
 export const withResolvers = <T>() => {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -65,12 +65,12 @@ export const withResolvers = <T>() => {
   return { promise, resolve, reject };
 };
 
-export function buildCacheKey(params = {} as Record<string, any>) {
+export const buildCacheKey = (params = {} as Record<string, any>) => {
   const keys = Object.keys(params).sort();
   return keys.map((key) => `${key}=${JSON.stringify(params[key])}`).join("&");
-}
+};
 
-export function objectsEqual(a: Record<string, any>, b: Record<string, any>) {
+export const objectsEqual = (a: Record<string, any>, b: Record<string, any>) => {
   if (a === b) return true;
 
   if (a && b && typeof a == "object" && typeof b == "object") {
@@ -97,12 +97,12 @@ export function objectsEqual(a: Record<string, any>, b: Record<string, any>) {
 
   // eslint-disable-next-line no-self-compare
   return a !== a && b !== b;
-}
+};
 
 /**
  * Проверяет, что указанные поля в объекте заполнены.
  */
-export function fieldsAreNotEmpty(obj: Record<string, any>, fields: string[]) {
+export const fieldsAreNotEmpty = (obj: Record<string, any>, fields: string[]) => {
   if (!isPlainObject(obj)) {
     return false;
   }
@@ -112,7 +112,7 @@ export function fieldsAreNotEmpty(obj: Record<string, any>, fields: string[]) {
     if (!result) return result;
   }
   return result;
-}
+};
 
 const WORD_PARTS_SPLITTER = new RegExp(`[${WORD_PARTS_DELIMITERS}]+`, "g");
 
@@ -120,7 +120,7 @@ const WORD_PARTS_SPLITTER = new RegExp(`[${WORD_PARTS_DELIMITERS}]+`, "g");
  * Разбивает составные слова на части
  * и дописывает их к исходному массиву.
  */
-function withSubTokens(tokens: string[]) {
+const withSubTokens = (tokens: string[]) => {
   let result: string[] = [];
   for (const token of tokens) {
     const subtokens = token.split(WORD_PARTS_SPLITTER);
@@ -130,7 +130,7 @@ function withSubTokens(tokens: string[]) {
     }
   }
   return result;
-}
+};
 
 const WORD_SPLITTER = new RegExp(`[${WORD_DELIMITERS}]+`, "g");
 
@@ -140,7 +140,7 @@ const WORD_SPLITTER = new RegExp(`[${WORD_DELIMITERS}]+`, "g");
  * (те, что не входят в список «нежелательных»).
  * Составные слова тоже разбивает на части.
  */
-export function tokenize(value: string, unformattableTokens?: string[]) {
+export const tokenize = (value: string, unformattableTokens?: string[]) => {
   let tokens = formatToken(value)
     .split(WORD_SPLITTER)
     .filter((e) => !!e);
@@ -150,26 +150,26 @@ export function tokenize(value: string, unformattableTokens?: string[]) {
   const otherTokens = arrayMinus(tokens, preferredTokens);
   tokens = withSubTokens([...preferredTokens, ...otherTokens]);
   return tokens;
-}
+};
 
 /**
  * Заменяет слова на составные части.
  */
-export function splitTokens(tokens: string[]) {
+export const splitTokens = (tokens: string[]) => {
   let result: string[] = [];
   for (const token of tokens) {
     const subtokens = token.split(WORD_PARTS_SPLITTER);
     result = [...result, ...subtokens.filter((e) => !!e)];
   }
   return result;
-}
+};
 
 /**
  * Нормализует строку, разбивает на слова,
  * отсеивает стоп-слова из списка.
  * Расклеивает буквы и цифры, написанные слитно.
  */
-export function split(str: string, stopwords?: string[]) {
+export const split = (str: string, stopwords?: string[]) => {
   const cleanStr = str
     .toLowerCase()
     .replace("ё", "е")
@@ -184,9 +184,9 @@ export function split(str: string, stopwords?: string[]) {
   const goodWords: string[] = arrayMinus(words, stopwords);
   goodWords.push(lastWord);
   return goodWords;
-}
+};
 
-function nowrapLinkedParts(formattedStr: string) {
+const nowrapLinkedParts = (formattedStr: string) => {
   const delimitedParts = formattedStr.split(", ");
   // string has no delimiters, should not wrap
   if (delimitedParts.length === 1) {
@@ -194,11 +194,11 @@ function nowrapLinkedParts(formattedStr: string) {
   }
   // disable word-wrap inside delimited parts
   return delimitedParts
-    .map(function (part) {
+    .map((part) => {
       return `<span class="${CLASSES.nowrap}">${part}</span>`;
     })
     .join(", ");
-}
+};
 
 const escapeHtmlMap = {
   "&": "&amp;",
@@ -209,19 +209,19 @@ const escapeHtmlMap = {
   "/": "&#x2F;",
 } as const;
 
-function escapeHtml(str: string) {
+const escapeHtml = (str: string) => {
   if (str) {
     for (const [ch, html] of Object.entries(escapeHtmlMap)) {
       str = str.replaceAll(ch, html);
     }
   }
   return str;
-}
+};
 
 /**
  * Makes HTML contents for suggestion item
  */
-export function highlightMatches(value: string, currentValue: string, options?: { unformattableTokens?: string[]; maxLength?: number }) {
+export const highlightMatches = (value: string, currentValue: string, options?: { unformattableTokens?: string[]; maxLength?: number }) => {
   type Chunk = any;
   const chunks: Chunk[] = [];
   const unformattableTokens = options && options.unformattableTokens;
@@ -236,7 +236,7 @@ export function highlightMatches(value: string, currentValue: string, options?: 
 
   const tokens = tokenize(currentValue, unformattableTokens);
 
-  const tokenMatchers = tokens.map(function (token) {
+  const tokenMatchers = tokens.map((token) => {
     return new RegExp(
       `^((.*)([${WORD_PARTS_DELIMITERS}]+))?` +
         `(${escapeRegExChars(token)})` +
@@ -343,7 +343,7 @@ export function highlightMatches(value: string, currentValue: string, options?: 
   }
 
   const formattedStr = chunks
-    .map(function (chunk) {
+    .map((chunk) => {
       let text = escapeHtml(chunk.text);
 
       if (text && chunk.matched) {
@@ -353,9 +353,9 @@ export function highlightMatches(value: string, currentValue: string, options?: 
     })
     .join("");
   return nowrapLinkedParts(formattedStr);
-}
+};
 
-export function makeSuggestionLabel(suggestions: any[], suggestion: any, fieldNames?: Record<string, string>) {
+export const makeSuggestionLabel = (suggestions: any[], suggestion: any, fieldNames?: Record<string, string>) => {
   const nameData = {} as Record<string, string>;
   const rWords = new RegExp(`([^${WORD_DELIMITERS}]*)([${WORD_DELIMITERS}]*)`, "g");
   let match;
@@ -387,4 +387,4 @@ export function makeSuggestionLabel(suggestions: any[], suggestion: any, fieldNa
       }
     }
   }
-}
+};

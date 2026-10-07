@@ -743,7 +743,7 @@ export type SuggestionsType<T> = {
   /** Компонует значение на основе данных */
   composeValue?: (data: any, options?: any) => string;
   /** Получение значения для выбора */
-  getSuggestionValue?: (that: any, options: any) => string | null;
+  getSuggestionValue?: (instance: any, options: any) => string | null;
 };
 
 export type Options<T extends keyof SuggestionMap = keyof SuggestionMap> = {

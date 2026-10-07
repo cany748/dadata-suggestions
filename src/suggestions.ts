@@ -89,7 +89,7 @@ export class HttpError extends Error {
 const isAbortError = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
 
 /**
- * fetch wrapper that returns a Promise with `abort` method
+ * fetch wrapper this returns a Promise with `abort` method
  */
 const fetchJson = (url: string, init: RequestInit, timeout: number) => {
   const controller = new AbortController();
@@ -120,7 +120,7 @@ const fetchJson = (url: string, init: RequestInit, timeout: number) => {
  * @param suggestion
  * @param instance other Suggestions instance
  */
-function belongsToArea(suggestion: any, instance: any) {
+const belongsToArea = (suggestion: any, instance: any) => {
   const parentSuggestion = instance.selection;
   let result = parentSuggestion && parentSuggestion.data && instance.bounds && instance.bounds.all && instance.bounds.all.length > 0;
 
@@ -135,7 +135,7 @@ function belongsToArea(suggestion: any, instance: any) {
     }
   }
   return result;
-}
+};
 
 const requestModes = {
   suggest: {
@@ -172,7 +172,7 @@ const fiasParamNames = [
  * @param {string} kladrId
  * @returns {string}
  */
-function getSignificantKladrId(kladrId: string) {
+const getSignificantKladrId = (kladrId: string) => {
   const significantKladrId = kladrId.replace(/^(\d{2})(\d*?)(0+)$/g, "$1$2");
   const length = significantKladrId.length;
   let significantLength = -1;
@@ -190,19 +190,19 @@ function getSignificantKladrId(kladrId: string) {
     significantLength = 19;
   }
   return significantKladrId.padEnd(significantLength, "0");
-}
+};
 
 /**
  * Пересечение массивов: ([1,2,3,4], [2,4,5,6]) => [2,4]
  * Исходные массивы не меняются.
  */
-function intersect(array1: any[], array2: any[]) {
+const intersect = (array1: any[], array2: any[]) => {
   const result = [] as any[];
   if (!Array.isArray(array1) || !Array.isArray(array2)) {
     return result;
   }
   return array1.filter((el) => array2.includes(el));
-}
+};
 
 /**
  * @param {Object} data  fields
@@ -428,14 +428,13 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   dispose() {
-    const that = this;
-    that.unbindElementEvents();
-    that.removeContainer();
-    that.unbindFromParent();
-    delete (that.element as any)[DATA_ATTR_KEY];
-    that.element.classList.remove("suggestions-input");
-    that.removeWrapper();
-    trigger(that.element, "suggestions-dispose");
+    this.unbindElementEvents();
+    this.removeContainer();
+    this.unbindFromParent();
+    delete (this.element as any)[DATA_ATTR_KEY];
+    this.element.classList.remove("suggestions-input");
+    this.removeWrapper();
+    trigger(this.element, "suggestions-dispose");
   }
 
   createWrapper() {
@@ -488,17 +487,16 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   clear() {
-    const that = this;
-    const currentSelection = that.selection;
+    const currentSelection = this.selection;
 
-    that.clearCache();
-    that.currentValue = "";
-    that.selection = null;
-    that.hide();
-    that.suggestions = [];
-    that.element.value = "";
-    trigger(that.element, "suggestions-clear");
-    that.trigger("InvalidateSelection", currentSelection);
+    this.clearCache();
+    this.currentValue = "";
+    this.selection = null;
+    this.hide();
+    this.suggestions = [];
+    this.element.value = "";
+    trigger(this.element, "suggestions-clear");
+    this.trigger("InvalidateSelection", currentSelection);
   }
 
   update() {
@@ -513,31 +511,30 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   setSuggestion(suggestion) {
-    const that = this;
     let data;
     let value;
 
     if (isPlainObject(suggestion) && isPlainObject(suggestion.data)) {
       suggestion = structuredClone(suggestion);
 
-      if (that.bounds.own.length > 0) {
-        that.checkValueBounds(suggestion);
-        data = that.copyDataComponents(suggestion.data, that.bounds.all);
+      if (this.bounds.own.length > 0) {
+        this.checkValueBounds(suggestion);
+        data = this.copyDataComponents(suggestion.data, this.bounds.all);
         if (suggestion.data.kladr_id) {
-          data.kladr_id = that.getBoundedKladrId(suggestion.data.kladr_id, that.bounds.all);
+          data.kladr_id = this.getBoundedKladrId(suggestion.data.kladr_id, this.bounds.all);
         }
         suggestion.data = data;
       }
 
-      that.selection = suggestion;
+      this.selection = suggestion;
 
-      // `that.suggestions` required by `that.getSuggestionValue` and must be set before
-      that.suggestions = [suggestion];
-      value = that.getSuggestionValue(suggestion) || "";
-      that.currentValue = value;
-      that.element.value = value;
-      that.abortRequest();
-      trigger(that.element, "suggestions-set");
+      // `this.suggestions` required by `this.getSuggestionValue` and must be set before
+      this.suggestions = [suggestion];
+      value = this.getSuggestionValue(suggestion) || "";
+      this.currentValue = value;
+      this.element.value = value;
+      this.abortRequest();
+      trigger(this.element, "suggestions-set");
     }
   }
 
@@ -546,50 +543,47 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * if no suitable object found, clean input element
    */
   fixData() {
-    const that = this;
-    const fullQuery = that.extendedCurrentValue();
-    const currentValue = that.element.value;
+    const fullQuery = this.extendedCurrentValue();
+    const currentValue = this.element.value;
     const resolver = withResolvers<any>();
 
     resolver.promise.then(
       (suggestion) => {
-        that.selectSuggestion(suggestion, 0, currentValue, {
+        this.selectSuggestion(suggestion, 0, currentValue, {
           hasBeenEnriched: true,
         });
-        if (!that.currentValue) {
-          that.element.value = currentValue;
+        if (!this.currentValue) {
+          this.element.value = currentValue;
         }
-        trigger(that.element, "suggestions-fixdata", [suggestion]);
+        trigger(this.element, "suggestions-fixdata", [suggestion]);
       },
       () => {
-        that.selection = null;
-        trigger(that.element, "suggestions-fixdata");
+        this.selection = null;
+        trigger(this.element, "suggestions-fixdata");
       },
     );
 
-    if (that.isQueryRequestable(fullQuery)) {
-      that.currentValue = fullQuery;
-      that
-        .getSuggestions(fullQuery, {
-          count: 1,
-          from_bound: null,
-          to_bound: null,
-        })
-        .then(
-          (suggestions) => {
-            // data fetched
-            const suggestion = suggestions[0];
-            if (suggestion) {
-              resolver.resolve(suggestion);
-            } else {
-              resolver.reject();
-            }
-          },
-          () => {
-            // no data fetched
+    if (this.isQueryRequestable(fullQuery)) {
+      this.currentValue = fullQuery;
+      this.getSuggestions(fullQuery, {
+        count: 1,
+        from_bound: null,
+        to_bound: null,
+      }).then(
+        (suggestions) => {
+          // data fetched
+          const suggestion = suggestions[0];
+          if (suggestion) {
+            resolver.resolve(suggestion);
+          } else {
             resolver.reject();
-          },
-        );
+          }
+        },
+        () => {
+          // no data fetched
+          resolver.reject();
+        },
+      );
     } else {
       resolver.reject();
     }
@@ -695,36 +689,35 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @return {} waiter which is to be resolved with suggestions as argument
    */
   getSuggestions(query: string, customParams?: object, requestOptions?: object) {
-    const that = this;
-    const options = that.options;
+    const options = this.options;
     const noCallbacks = requestOptions && requestOptions.noCallbacks;
     const useEnrichmentCache = requestOptions && requestOptions.useEnrichmentCache;
-    const method = (requestOptions && requestOptions.method) || that.requestMode.method;
-    const params = that.constructRequestParams(query, customParams);
+    const method = (requestOptions && requestOptions.method) || this.requestMode.method;
+    const params = this.constructRequestParams(query, customParams);
     const cacheKey = buildCacheKey(params);
     const resolver = withResolvers<any>();
 
-    const response = that.cachedResponse[cacheKey];
+    const response = this.cachedResponse[cacheKey];
     if (response && Array.isArray(response.suggestions)) {
       resolver.resolve(response.suggestions);
-    } else if (that.isBadQuery(query)) {
+    } else if (this.isBadQuery(query)) {
       resolver.reject();
-    } else if (!noCallbacks && options.onSearchStart.call(that.element, params) === false) {
+    } else if (!noCallbacks && options.onSearchStart.call(this.element, params) === false) {
       resolver.reject();
     } else {
-      that.doGetSuggestions(params, method).then(
+      this.doGetSuggestions(params, method).then(
         ({ data: response }) => {
           // if response is correct and current value has not been changed
-          if (that.processResponse(response) && query == that.currentValue) {
+          if (this.processResponse(response) && query == this.currentValue) {
             // Cache results if cache is not disabled:
             if (!options.noCache) {
               if (useEnrichmentCache) {
-                that.enrichmentCache[query] = response.suggestions[0];
+                this.enrichmentCache[query] = response.suggestions[0];
               } else {
-                that.enrichResponse(response, query);
-                that.cachedResponse[cacheKey] = response;
+                this.enrichResponse(response, query);
+                this.cachedResponse[cacheKey] = response;
                 if (options.preventBadQueries && response.suggestions.length === 0) {
-                  that.badQueries.push(query);
+                  this.badQueries.push(query);
                 }
               }
             }
@@ -734,13 +727,13 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
             resolver.reject();
           }
           if (!noCallbacks) {
-            options.onSearchComplete.call(that.element, query, response?.suggestions);
+            options.onSearchComplete.call(this.element, query, response?.suggestions);
           }
         },
         (error) => {
           resolver.reject();
           if (!noCallbacks && !isAbortError(error)) {
-            options.onSearchError.call(that.element, query, error);
+            options.onSearchError.call(this.element, query, error);
           }
         },
       );
@@ -749,15 +742,14 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   doGetSuggestions(params: object, method: string) {
-    const that = this;
-    const request = that.request(method, params);
+    const request = this.request(method, params);
 
-    that.abortRequest();
-    that.currentRequest = request;
+    this.abortRequest();
+    this.currentRequest = request;
 
     const onComplete = () => {
-      if (that.currentRequest === request) {
-        that.currentRequest = null;
+      if (this.currentRequest === request) {
+        this.currentRequest = null;
       }
     };
     request.then(onComplete, onComplete);
@@ -902,12 +894,10 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   enrichSuggestion(this: Suggestions, suggestion, selectionOptions) {
-    const that = this;
-
     if (
-      !that.options.enrichmentEnabled ||
-      !that.type.enrichmentEnabled ||
-      !that.requestMode.enrichmentEnabled ||
+      !this.options.enrichmentEnabled ||
+      !this.type.enrichmentEnabled ||
+      !this.requestMode.enrichmentEnabled ||
       (selectionOptions && selectionOptions.dontEnrich)
     ) {
       return Promise.resolve([suggestion]);
@@ -919,23 +909,22 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     }
 
     const resolver = withResolvers<[any, boolean?]>();
-    that.disableDropdown();
+    this.disableDropdown();
 
-    const query = that.type.getEnrichmentQuery(suggestion);
-    const customParams = that.type.enrichmentParams;
+    const query = this.type.getEnrichmentQuery(suggestion);
+    const customParams = this.type.enrichmentParams;
     const requestOptions = {
       noCallbacks: true,
       useEnrichmentCache: true,
-      method: that.type.enrichmentMethod,
+      method: this.type.enrichmentMethod,
     };
 
     // Set `currentValue` to make `processResponse` to consider enrichment response valid
-    that.currentValue = query;
+    this.currentValue = query;
 
-    that
-      .getSuggestions(query, customParams, requestOptions)
+    this.getSuggestions(query, customParams, requestOptions)
       .finally(() => {
-        that.enableDropdown();
+        this.enableDropdown();
       })
       .then(
         (suggestions) => {
@@ -968,13 +957,12 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   checkStatus(this: Suggestions) {
-    const that = this;
-    const token = (that.options.token && that.options.token.trim()) || "";
-    const requestKey = that.options.type + token;
+    const token = (this.options.token && this.options.token.trim()) || "";
+    const requestKey = this.options.type + token;
     let request = statusRequests[requestKey];
 
     if (!request) {
-      request = statusRequests[requestKey] = that.request("status");
+      request = statusRequests[requestKey] = this.request("status");
     }
 
     type Status = {
@@ -989,8 +977,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     const triggerError = (error: unknown) => {
       // If unauthorized
-      if (typeof that.options.onSearchError === "function") {
-        that.options.onSearchError.call(that.element, null, error);
+      if (typeof this.options.onSearchError === "function") {
+        this.options.onSearchError.call(this.element, null, error);
       }
     };
 
@@ -999,7 +987,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
         if (status?.search) {
           const plan = response.headers.get("X-Plan");
           status.plan = plan;
-          Object.assign(that.status, status);
+          Object.assign(this.status, status);
         } else {
           triggerError(new Error("Service Unavailable"));
         }
@@ -1018,16 +1006,15 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   setBoundsOptions(this: Suggestions) {
-    const that = this;
-    const newBounds = (that.options.bounds || "").trim().split("-");
+    const newBounds = (this.options.bounds || "").trim().split("-");
     let boundFrom = newBounds[0];
     let boundTo = newBounds.at(-1);
     const boundsOwn = [];
     let boundIsOwn;
     const boundsAll = [];
 
-    const boundsAvailable = that.type.dataComponents
-      ? that.type.dataComponents.filter((item) => item.forBounds).map((item) => item.id)
+    const boundsAvailable = this.type.dataComponents
+      ? this.type.dataComponents.filter((item) => item.forBounds).map((item) => item.id)
       : [];
 
     if (!boundsAvailable.includes(boundFrom)) {
@@ -1048,46 +1035,44 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       }
     }
 
-    that.bounds.from = boundFrom;
-    that.bounds.to = boundTo;
-    that.bounds.all = boundsAll;
-    that.bounds.own = boundsOwn;
+    this.bounds.from = boundFrom;
+    this.bounds.to = boundTo;
+    this.bounds.all = boundsAll;
+    this.bounds.own = boundsOwn;
   }
 
   constructBoundsParams(this: Suggestions) {
-    const that = this;
     const params = {};
 
-    if (that.bounds.from) {
-      params.from_bound = { value: that.bounds.from };
+    if (this.bounds.from) {
+      params.from_bound = { value: this.bounds.from };
     }
-    if (that.bounds.to) {
-      params.to_bound = { value: that.bounds.to };
+    if (this.bounds.to) {
+      params.to_bound = { value: this.bounds.to };
     }
 
     return params;
   }
 
   /**
-   * Подстраивает suggestion.value под that.bounds.own
+   * Подстраивает suggestion.value под this.bounds.own
    * Ничего не возвращает, меняет в самом suggestion
    * @param suggestion
    */
   checkValueBounds(this: Suggestions, suggestion: Suggestion<SuggestionAny>) {
-    const that = this;
     let valueData;
 
     // If any bounds set up
-    if (that.bounds.own.length > 0 && that.type.composeValue) {
+    if (this.bounds.own.length > 0 && this.type.composeValue) {
       // делаем копию
-      const bounds = [...that.bounds.own];
+      const bounds = [...this.bounds.own];
       // если роль текущего инстанса плагина показывать только район города
       // то для корректного формировния нужен city_district_fias_id
       if (bounds.length === 1 && bounds[0] === "city_district") {
         bounds.push("city_district_fias_id");
       }
-      valueData = that.copyDataComponents(suggestion.data, bounds);
-      suggestion.value = that.type.composeValue(valueData);
+      valueData = this.copyDataComponents(suggestion.data, bounds);
+      suggestion.value = this.type.composeValue(valueData);
     }
   }
 
@@ -1323,27 +1308,26 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @returns {} promise, resolved with index of selected suggestion or rejected if nothing matched
    */
   selectCurrentValue(selectionOptions) {
-    const that = this;
     const result = withResolvers<number>();
 
     // force onValueChange to be executed if it has been deferred
-    if (that.onChangeTimeout) {
-      clearTimeout(that.onChangeTimeout);
-      that.onChangeTimeout = null;
-      that.onValueChange();
+    if (this.onChangeTimeout) {
+      clearTimeout(this.onChangeTimeout);
+      this.onChangeTimeout = null;
+      this.onValueChange();
     }
 
-    that.fetchPhase.then(
+    this.fetchPhase.then(
       () => {
         let index;
 
         // When suggestion has already been selected and not modified
-        if (that.selection && !that.visible) {
+        if (this.selection && !this.visible) {
           result.reject();
         } else {
-          index = that.findSuggestionIndex();
+          index = this.findSuggestionIndex();
 
-          that.select(index, selectionOptions);
+          this.select(index, selectionOptions);
 
           if (index === -1) {
             result.reject();
@@ -1364,10 +1348,8 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * Selects first when user interaction is not supposed
    */
   selectFoundSuggestion() {
-    const that = this;
-
-    if (!that.requestMode.userSelect) {
-      that.select(0, {});
+    if (!this.requestMode.userSelect) {
+      this.select(0, {});
     }
   }
 
@@ -1376,15 +1358,14 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @returns {number} index of found suggestion
    */
   findSuggestionIndex() {
-    const that = this;
-    let index = that.selectedIndex;
+    let index = this.selectedIndex;
 
     if (index === -1) {
       // matchers always operate with trimmed strings
-      const value = that.element.value.trim();
+      const value = this.element.value.trim();
       if (value) {
-        that.type.matchers.some(function (matcher) {
-          index = matcher(value, that.suggestions);
+        this.type.matchers.some((matcher) => {
+          index = matcher(value, this.suggestions);
           return index !== -1;
         });
       }
@@ -1401,28 +1382,27 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @param {boolean} [selectionOptions.noSpace]  prevents adding space at the end of current value
    */
   select(index, selectionOptions) {
-    const that = this;
-    const suggestion = that.suggestions[index];
+    const suggestion = this.suggestions[index];
     const continueSelecting = selectionOptions && selectionOptions.continueSelecting;
-    const currentValue = that.currentValue;
+    const currentValue = this.currentValue;
 
     // Prevent recursive execution
-    if (that.triggering.Select) return;
+    if (this.triggering.Select) return;
 
     // if no suggestion to select
     if (!suggestion) {
-      if (!continueSelecting && !that.selection) {
-        that.triggerOnSelectNothing();
+      if (!continueSelecting && !this.selection) {
+        this.triggerOnSelectNothing();
       }
-      that.onSelectComplete(continueSelecting);
+      this.onSelectComplete(continueSelecting);
       return;
     }
 
-    const hasSameValues = that.hasSameValues(suggestion);
+    const hasSameValues = this.hasSameValues(suggestion);
 
-    return that.enrichSuggestion(suggestion, selectionOptions).then(([enrichedSuggestion, hasBeenEnriched]) => {
+    return this.enrichSuggestion(suggestion, selectionOptions).then(([enrichedSuggestion, hasBeenEnriched]) => {
       const newSelectionOptions = { hasBeenEnriched, hasSameValues, ...selectionOptions };
-      that.selectSuggestion(enrichedSuggestion, index, currentValue, newSelectionOptions);
+      this.selectSuggestion(enrichedSuggestion, index, currentValue, newSelectionOptions);
     });
   }
 
@@ -1438,65 +1418,60 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @param {boolean} selectionOptions.hasSameValues
    */
   selectSuggestion(suggestion, index, lastValue, selectionOptions) {
-    const that = this;
     let continueSelecting = selectionOptions.continueSelecting;
-    const assumeDataComplete = !that.type.isDataComplete || that.type.isDataComplete.call(that, suggestion);
-    const currentSelection = that.selection;
+    const assumeDataComplete = !this.type.isDataComplete || this.type.isDataComplete.call(this, suggestion);
+    const currentSelection = this.selection;
 
     // Prevent recursive execution
-    if (that.triggering.Select) return;
+    if (this.triggering.Select) return;
 
     if (assumeDataComplete) {
       continueSelecting = false;
     }
 
     // `suggestions` cat be empty, e.g. during `fixData`
-    if (selectionOptions.hasBeenEnriched && that.suggestions[index]) {
-      that.suggestions[index].data = suggestion.data;
+    if (selectionOptions.hasBeenEnriched && this.suggestions[index]) {
+      this.suggestions[index].data = suggestion.data;
     }
 
-    if (that.requestMode.updateValue) {
-      that.checkValueBounds(suggestion);
-      that.currentValue = that.getSuggestionValue(suggestion, selectionOptions);
+    if (this.requestMode.updateValue) {
+      this.checkValueBounds(suggestion);
+      this.currentValue = this.getSuggestionValue(suggestion, selectionOptions);
 
-      if (that.currentValue && !selectionOptions.noSpace && !assumeDataComplete) {
-        that.currentValue += " ";
+      if (this.currentValue && !selectionOptions.noSpace && !assumeDataComplete) {
+        this.currentValue += " ";
       }
-      that.element.value = that.currentValue;
+      this.element.value = this.currentValue;
     }
 
-    if (that.currentValue) {
-      that.selection = suggestion;
-      if (!that.areSuggestionsSame(suggestion, currentSelection)) {
-        that.trigger("Select", suggestion, that.currentValue !== lastValue);
+    if (this.currentValue) {
+      this.selection = suggestion;
+      if (!this.areSuggestionsSame(suggestion, currentSelection)) {
+        this.trigger("Select", suggestion, this.currentValue !== lastValue);
       }
-      if (that.requestMode.userSelect) {
-        that.onSelectComplete(continueSelecting);
+      if (this.requestMode.userSelect) {
+        this.onSelectComplete(continueSelecting);
       }
     } else {
-      that.selection = null;
-      that.triggerOnSelectNothing();
+      this.selection = null;
+      this.triggerOnSelectNothing();
     }
 
-    that.shareWithParent(suggestion);
+    this.shareWithParent(suggestion);
   }
 
   onSelectComplete(continueSelecting: boolean) {
-    const that = this;
-
     if (continueSelecting) {
-      that.selectedIndex = -1;
-      that.updateSuggestions(that.currentValue);
+      this.selectedIndex = -1;
+      this.updateSuggestions(this.currentValue);
     } else {
-      that.hide();
+      this.hide();
     }
   }
 
   triggerOnSelectNothing() {
-    const that = this;
-
-    if (!that.triggering.SelectNothing) {
-      that.trigger("SelectNothing", that.currentValue);
+    if (!this.triggering.SelectNothing) {
+      this.trigger("SelectNothing", this.currentValue);
     }
   }
 
@@ -1595,72 +1570,69 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @returns {boolean}
    */
   hasSuggestionsToChoose() {
-    const that = this;
-
     return (
-      that.suggestions.length > 1 ||
-      (that.suggestions.length === 1 && (!that.selection || that.suggestions[0].value.trim() !== that.selection.value.trim()))
+      this.suggestions.length > 1 ||
+      (this.suggestions.length === 1 && (!this.selection || this.suggestions[0].value.trim() !== this.selection.value.trim()))
     );
   }
 
   suggest() {
-    const that = this;
-    const options = that.options;
+    const options = this.options;
     const html = [];
 
-    if (!that.requestMode.userSelect) {
+    if (!this.requestMode.userSelect) {
       return;
     }
 
     // если нечего показывать, то сообщаем об этом
-    if (that.hasSuggestionsToChoose()) {
+    if (this.hasSuggestionsToChoose()) {
       // Build hint html
-      if (options.hint && that.suggestions.length > 0) {
-        html.push(`<div class="${that.classes.hint}">${options.hint}</div>`);
+      if (options.hint && this.suggestions.length > 0) {
+        html.push(`<div class="${this.classes.hint}">${options.hint}</div>`);
       }
-      that.selectedIndex = -1;
+      this.selectedIndex = -1;
       // Build suggestions inner HTML:
-      for (const [i, suggestion] of that.suggestions.entries()) {
-        if (suggestion == that.selection) {
-          that.selectedIndex = i;
+      for (const [i, suggestion] of this.suggestions.entries()) {
+        if (suggestion == this.selection) {
+          this.selectedIndex = i;
         }
-        that.buildSuggestionHtml(suggestion, i, html);
+        this.buildSuggestionHtml(suggestion, i, html);
       }
-    } else if (that.suggestions.length > 0) {
-      that.hide();
+    } else if (this.suggestions.length > 0) {
+      this.hide();
       return;
     } else {
-      const noSuggestionsHint = that.getNoSuggestionsHint();
+      const noSuggestionsHint = this.getNoSuggestionsHint();
       if (noSuggestionsHint) {
-        html.push(`<div class="${that.classes.hint}">${noSuggestionsHint}</div>`);
+        html.push(`<div class="${this.classes.hint}">${noSuggestionsHint}</div>`);
       } else {
-        that.hide();
+        this.hide();
         return;
       }
     }
 
-    that.container!.innerHTML = html.join("");
+    this.container!.innerHTML = html.join("");
 
     // Select first value by default:
-    if (options.autoSelectFirst && that.selectedIndex === -1) {
-      that.selectedIndex = 0;
+    if (options.autoSelectFirst && this.selectedIndex === -1) {
+      this.selectedIndex = 0;
     }
-    if (that.selectedIndex !== -1) {
-      const items = that.getSuggestionsItems();
-      const selectedItem = items[that.selectedIndex];
+    if (this.selectedIndex !== -1) {
+      const items = this.getSuggestionsItems();
+      const selectedItem = items[this.selectedIndex];
       if (selectedItem) {
-        selectedItem.classList.add(that.classes.selected);
+        selectedItem.classList.add(this.classes.selected);
       }
     }
 
     if (typeof options.beforeRender === "function") {
-      options.beforeRender.call(that.element, that.container);
+      options.beforeRender.call(this.element, this.container);
     }
 
-    if (that.container) {
-      that.container.style.display = "";
+    if (this.container) {
+      this.container.style.display = "";
     }
-    that.visible = true;
+    this.visible = true;
   }
 
   buildSuggestionHtml(suggestion, ordinal, html) {
@@ -1682,45 +1654,40 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   wrapFormattedValue(value, suggestion) {
-    const that = this;
     const status = suggestion.data?.state?.status;
 
-    return `<span class="${that.classes.value}"${status ? ` data-suggestion-status="${status}"` : ""}>${value}</span>`;
+    return `<span class="${this.classes.value}"${status ? ` data-suggestion-status="${status}"` : ""}>${value}</span>`;
   }
 
   formatResult(value, currentValue, suggestion, options) {
-    const that = this;
-
     value = highlightMatches(value, currentValue, options);
 
-    return that.wrapFormattedValue(value, suggestion);
+    return this.wrapFormattedValue(value, suggestion);
   }
 
   hide() {
-    const that = this;
-    that.visible = false;
-    that.selectedIndex = -1;
-    if (that.container) {
-      that.container.style.display = "none";
-      that.container.innerHTML = "";
+    this.visible = false;
+    this.selectedIndex = -1;
+    if (this.container) {
+      this.container.style.display = "none";
+      this.container.innerHTML = "";
     }
   }
 
   activate(index) {
-    const that = this;
-    const selected = that.classes.selected;
+    const selected = this.classes.selected;
 
-    if (!that.dropdownDisabled) {
-      const children = that.getSuggestionsItems();
+    if (!this.dropdownDisabled) {
+      const children = this.getSuggestionsItems();
 
       for (const child of children) {
         child.classList.remove(selected);
       }
 
-      that.selectedIndex = index;
+      this.selectedIndex = index;
 
-      if (that.selectedIndex !== -1 && children.length > that.selectedIndex) {
-        const activeItem = children[that.selectedIndex];
+      if (this.selectedIndex !== -1 && children.length > this.selectedIndex) {
+        const activeItem = children[this.selectedIndex];
         if (activeItem) {
           activeItem.classList.add(selected);
           return activeItem;
@@ -1732,76 +1699,69 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   deactivate(restoreValue) {
-    const that = this;
-
-    if (!that.dropdownDisabled) {
-      that.selectedIndex = -1;
-      for (const item of that.getSuggestionsItems()) {
-        item.classList.remove(that.classes.selected);
+    if (!this.dropdownDisabled) {
+      this.selectedIndex = -1;
+      for (const item of this.getSuggestionsItems()) {
+        item.classList.remove(this.classes.selected);
       }
       if (restoreValue) {
-        that.element.value = that.currentValue;
+        this.element.value = this.currentValue;
       }
     }
   }
 
   moveUp() {
-    const that = this;
-
-    if (that.dropdownDisabled) {
+    if (this.dropdownDisabled) {
       return;
     }
-    if (that.selectedIndex === -1) {
-      if (that.suggestions.length > 0) {
-        that.adjustScroll(that.suggestions.length - 1);
+    if (this.selectedIndex === -1) {
+      if (this.suggestions.length > 0) {
+        this.adjustScroll(this.suggestions.length - 1);
       }
       return;
     }
 
-    if (that.selectedIndex === 0) {
-      that.deactivate(true);
+    if (this.selectedIndex === 0) {
+      this.deactivate(true);
       return;
     }
 
-    that.adjustScroll(that.selectedIndex - 1);
+    this.adjustScroll(this.selectedIndex - 1);
   }
 
   moveDown() {
-    const that = this;
-
-    if (that.dropdownDisabled) {
+    if (this.dropdownDisabled) {
       return;
     }
-    if (that.selectedIndex === that.suggestions.length - 1) {
-      that.deactivate(true);
+    if (this.selectedIndex === this.suggestions.length - 1) {
+      this.deactivate(true);
       return;
     }
 
-    that.adjustScroll(that.selectedIndex + 1);
+    this.adjustScroll(this.selectedIndex + 1);
   }
 
   adjustScroll(index) {
-    const that = this;
-    const activeItem = that.activate(index);
+    const activeItem = this.activate(index);
 
-    if (!activeItem || !that.container) {
+    if (!activeItem || !this.container) {
       return;
     }
 
-    const scrollTop = that.container.scrollTop;
-    const itemTop = activeItem.offsetTop - that.container.offsetTop;
+    const scrollTop = this.container.scrollTop;
+    const itemTop = activeItem.offsetTop - this.container.offsetTop;
 
     if (itemTop < scrollTop) {
-      that.container.scrollTop = itemTop;
+      this.container.scrollTop = itemTop;
     } else {
       const itemBottom = itemTop + activeItem.offsetHeight;
-      const containerHeight = that.container.clientHeight;
+      const containerHeight = this.container.clientHeight;
       if (itemBottom > scrollTop + containerHeight) {
-        that.container.scrollTop = itemBottom - containerHeight;
+        this.container.scrollTop = itemBottom - containerHeight;
       }
     }
 
-    that.element.value = that.suggestions[index].value;
+    this.element.value = this.suggestions[index].value;
   }
 
   createConstraints() {
@@ -1809,12 +1769,11 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   setupConstraints() {
-    const that = this;
-    const constraints = that.options.constraints;
+    const constraints = this.options.constraints;
 
     if (!constraints) {
-      that.unbindFromParent();
-      that.constraints = {};
+      this.unbindFromParent();
+      this.constraints = {};
       return;
     }
 
@@ -1823,38 +1782,35 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       // Constraint is an element or selector - find parent suggestions instance
       const parentEl =
         typeof constraints === "string" ? (document.querySelector(constraints) as HTMLInputElement) : (constraints as HTMLInputElement);
-      if (parentEl && parentEl !== that.element) {
+      if (parentEl && parentEl !== this.element) {
         const parentInstance = (parentEl as any)[DATA_ATTR_KEY] as Suggestions | undefined;
         if (parentInstance) {
-          that.unbindFromParent();
-          that.constraints = parentEl;
-          that.bindToParent();
+          this.unbindFromParent();
+          this.constraints = parentEl;
+          this.bindToParent();
         }
       }
     } else {
       // Constraint is an object or array of objects
-      that.unbindFromParent();
-      that.constraints = {};
+      this.unbindFromParent();
+      this.constraints = {};
       for (const constraint of Array.isArray(constraints) ? constraints : [constraints]) {
-        that.addConstraint(constraint);
+        this.addConstraint(constraint);
       }
     }
   }
 
   addConstraint(constraint) {
-    const that = this;
-
-    constraint = new Constraint(constraint, that);
+    constraint = new Constraint(constraint, this);
 
     if (constraint.isValid()) {
-      that.constraints[constraint.id] = constraint;
+      this.constraints[constraint.id] = constraint;
     }
   }
 
   constructConstraintsParams() {
-    const that = this;
     const locations = [];
-    let constraints = that.constraints;
+    let constraints = this.constraints;
     let parentInstance;
     let parentData;
     const params = {};
@@ -1874,7 +1830,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       if (parentData) {
         // if send city_fias_id for city request
         // then no cities will responded
-        if (that.bounds.own.includes("city")) {
+        if (this.bounds.own.includes("city")) {
           delete parentData.city_fias_id;
         }
         params.locations = [parentData];
@@ -1887,7 +1843,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
       if (locations.length > 0) {
         params.locations = locations;
-        params.restrict_value = that.options.restrict_value;
+        params.restrict_value = this.options.restrict_value;
       }
     }
 
@@ -1899,10 +1855,9 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * @returns {String}
    */
   getFirstConstraintLabel() {
-    const that = this;
-    const constraintsId = isPlainObject(that.constraints) && Object.keys(that.constraints)[0];
+    const constraintsId = isPlainObject(this.constraints) && Object.keys(this.constraints)[0];
 
-    return constraintsId ? that.constraints[constraintsId].label : "";
+    return constraintsId ? this.constraints[constraintsId].label : "";
   }
 
   bindToParent() {
@@ -1947,29 +1902,27 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   shareWithParent(suggestion) {
-    // that is the parent control's instance
-    const that = this.getParentInstance();
+    const parentInstance = this.getParentInstance();
 
-    if (!that || that.type !== this.type || belongsToArea(suggestion, that)) {
+    if (!parentInstance || parentInstance.type !== this.type || belongsToArea(suggestion, parentInstance)) {
       return;
     }
 
-    that.shareWithParent(suggestion);
-    that.setSuggestion(suggestion);
+    parentInstance.shareWithParent(suggestion);
+    parentInstance.setSuggestion(suggestion);
   }
 
   /**
-   * Pick only fields that absent in restriction
+   * Pick only fields this absent in restriction
    */
   getUnrestrictedData(data) {
-    const that = this;
     const restrictedKeys = [];
     let unrestrictedData = {};
     let maxSpecificity = -1;
 
     // Find most specific location that could restrict current data
-    if (isPlainObject(that.constraints)) {
-      for (const constraint of Object.values(that.constraints) as Constraint[]) {
+    if (isPlainObject(this.constraints)) {
+      for (const constraint of Object.values(this.constraints) as Constraint[]) {
         for (const location of constraint.locations) {
           if (location.containsData(data) && location.specificity > maxSpecificity) {
             maxSpecificity = location.specificity;
@@ -1981,11 +1934,11 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     if (maxSpecificity >= 0) {
       // Для городов-регионов нужно также отсечь и город
       if (data.region_kladr_id && data.region_kladr_id === data.city_kladr_id) {
-        restrictedKeys.push(...that.type.dataComponentsById.city.fields);
+        restrictedKeys.push(...this.type.dataComponentsById.city.fields);
       }
 
       // Collect all fieldnames from all restricted components
-      for (const component of that.type.dataComponents.slice(0, maxSpecificity + 1)) {
+      for (const component of this.type.dataComponents.slice(0, maxSpecificity + 1)) {
         restrictedKeys.push(...component.fields);
       }
 
@@ -2020,19 +1973,19 @@ Suggestions.resetTokens = () => {
   statusRequests = {};
 };
 
-const checkLocation = (that: Suggestions) => {
-  const providedLocation = that.options.geoLocation;
+const checkLocation = (instance: Suggestions) => {
+  const providedLocation = instance.options.geoLocation;
 
-  if (!that.type.geoEnabled || !providedLocation) {
+  if (!instance.type.geoEnabled || !providedLocation) {
     return;
   }
 
-  that.geoLocation = detectedLocation;
+  instance.geoLocation = detectedLocation;
   if (isPlainObject(providedLocation) || Array.isArray(providedLocation)) {
-    that.geoLocation = providedLocation;
+    instance.geoLocation = providedLocation;
   } else {
     if (!locationRequest) {
-      locationRequest = that.request("iplocate/address");
+      locationRequest = instance.request("iplocate/address");
     }
 
     locationRequest.then(
@@ -2042,7 +1995,7 @@ const checkLocation = (that: Suggestions) => {
           detectedLocation = {
             kladr_id: locationData.kladr_id,
           };
-          that.geoLocation = detectedLocation;
+          instance.geoLocation = detectedLocation;
         }
       },
       () => {},
@@ -2050,11 +2003,11 @@ const checkLocation = (that: Suggestions) => {
   }
 };
 
-const constructParams = (that: Suggestions) => {
+const constructParams = (instance: Suggestions) => {
   const params = {};
 
-  if (that.geoLocation) {
-    const locationData = that.geoLocation;
+  if (instance.geoLocation) {
+    const locationData = instance.geoLocation;
     params.locations_boost = Array.isArray(locationData) ? locationData : [locationData];
   }
 

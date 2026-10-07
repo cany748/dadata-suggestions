@@ -4,11 +4,11 @@ import { WORD_DELIMITERS } from "../constants";
 import { escapeRegExChars, fieldsAreNotEmpty } from "../utils";
 import { matchers } from "../matchers";
 
-function valueStartsWith(suggestion, field) {
+const valueStartsWith = (suggestion, field) => {
   const fieldValue = suggestion.data && suggestion.data[field];
 
   return fieldValue && new RegExp(`^${escapeRegExChars(fieldValue)}([${WORD_DELIMITERS}]|$)`, "i").test(suggestion.value);
-}
+};
 
 const NAME_TYPE = {
   urlSuffix: "fio",
@@ -21,16 +21,15 @@ const NAME_TYPE = {
     patronymic: "отчество",
   },
   isDataComplete(suggestion) {
-    const that = this;
-    let params = that.options.params;
+    let params = this.options.params;
     const data = suggestion.data;
     let fields;
 
     if (typeof params === "function") {
-      params = params.call(that.element, suggestion.value);
+      params = params.call(this.element, suggestion.value);
     }
     if (params && params.parts) {
-      fields = params.parts.map(function (part) {
+      fields = params.parts.map((part) => {
         return part.toLowerCase();
       });
     } else {

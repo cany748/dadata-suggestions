@@ -356,7 +356,7 @@ export type DataComponents = (typeof ADDRESS_COMPONENTS)[number];
  * Возвращает карты, ключом в которой является значение идентифицирующего поля, а значением — исходный объект.
  * Заодно добавляет объектам поле с порядковым номером.
  */
-function indexObjectsById(objectsArray: readonly DataComponents[]) {
+const indexObjectsById = (objectsArray: readonly DataComponents[]) => {
   const result = {} as Record<DataComponents["id"], { index: number } & DataComponents>;
 
   for (const [idx, obj] of objectsArray.entries()) {
@@ -368,7 +368,11 @@ function indexObjectsById(objectsArray: readonly DataComponents[]) {
   }
 
   return result;
-}
+};
+
+const componentsUnderCityDistrict = ADDRESS_COMPONENTS.slice(
+  ADDRESS_COMPONENTS.findIndex((component) => component.id === "city_district") + 1,
+).map((component) => component.id);
 
 export const ADDRESS_TYPE = {
   urlSuffix: "address",
@@ -432,48 +436,37 @@ export const ADDRESS_TYPE = {
 
     return [country, region, area, city, cityDistrict, settelement, street, house, flat, postalBox].filter((e) => !!e).join(", ");
   },
-  formatResult: (function () {
-    const componentsUnderCityDistrict = [];
-    let _underCityDistrict = false;
+  formatResult(this: Suggestions, value, currentValue, suggestion, options) {
+    const district = suggestion.data && suggestion.data.city_district_with_type;
+    const unformattableTokens = options && options.unformattableTokens;
+    const historyValues = suggestion.data && suggestion.data.history_values;
+    let tokens;
+    let unusedTokens;
+    let formattedHistoryValues;
 
-    for (const component of ADDRESS_COMPONENTS) {
-      if (_underCityDistrict) componentsUnderCityDistrict.push(component.id);
-      if (component.id === "city_district") _underCityDistrict = true;
+    // добавляем исторические значения
+    if (historyValues && historyValues.length > 0) {
+      tokens = tokenize(currentValue, unformattableTokens);
+      unusedTokens = this.type.findUnusedTokens(tokens, value);
+      formattedHistoryValues = this.type.getFormattedHistoryValues(unusedTokens, historyValues);
+      if (formattedHistoryValues) {
+        value += formattedHistoryValues;
+      }
     }
 
-    return function (value, currentValue, suggestion, options) {
-      const that = this;
-      const district = suggestion.data && suggestion.data.city_district_with_type;
-      const unformattableTokens = options && options.unformattableTokens;
-      const historyValues = suggestion.data && suggestion.data.history_values;
-      let tokens;
-      let unusedTokens;
-      let formattedHistoryValues;
+    value = highlightMatches(value, currentValue, options);
+    value = this.wrapFormattedValue(value, suggestion);
 
-      // добавляем исторические значения
-      if (historyValues && historyValues.length > 0) {
-        tokens = tokenize(currentValue, unformattableTokens);
-        unusedTokens = this.type.findUnusedTokens(tokens, value);
-        formattedHistoryValues = this.type.getFormattedHistoryValues(unusedTokens, historyValues);
-        if (formattedHistoryValues) {
-          value += formattedHistoryValues;
-        }
-      }
+    if (
+      district &&
+      (this.bounds.own.length === 0 || this.bounds.own.includes("street")) &&
+      Object.keys(this.copyDataComponents(suggestion.data, componentsUnderCityDistrict)).length > 0
+    ) {
+      value += `<div class="${this.classes.subtext}">${highlightMatches(district, currentValue)}</div>`;
+    }
 
-      value = highlightMatches(value, currentValue, options);
-      value = that.wrapFormattedValue(value, suggestion);
-
-      if (
-        district &&
-        (that.bounds.own.length === 0 || that.bounds.own.includes("street")) &&
-        Object.keys(that.copyDataComponents(suggestion.data, componentsUnderCityDistrict)).length > 0
-      ) {
-        value += `<div class="${that.classes.subtext}">${highlightMatches(district, currentValue)}</div>`;
-      }
-
-      return value;
-    };
-  })(),
+    return value;
+  },
 
   /**
    * Возвращает список слов в запросе,
@@ -482,7 +475,7 @@ export const ADDRESS_TYPE = {
   findUnusedTokens(tokens, value) {
     let unused = [];
 
-    unused = tokens.filter(function (token) {
+    unused = tokens.filter((token) => {
       return !value.includes(token);
     });
 

@@ -9,19 +9,19 @@ const innPartsLengths = {
   INDIVIDUAL: [2, 2, 6, 2],
 };
 
-function chooseFormattedField(formattedMain: string, formattedAlt: string) {
+const chooseFormattedField = (formattedMain: string, formattedAlt: string) => {
   const rHasMatch = /<strong>/;
   return rHasMatch.test(formattedAlt) && !rHasMatch.test(formattedMain) ? formattedAlt : formattedMain;
-}
+};
 
-function formattedField(main: string, alt: string, currentValue: string, suggestion: any, options: any) {
+const formattedField = (main: string, alt: string, currentValue: string, suggestion: any, options: any) => {
   const formattedMain = highlightMatches(main, currentValue, options);
   const formattedAlt = highlightMatches(alt, currentValue, options);
 
   return chooseFormattedField(formattedMain, formattedAlt);
-}
+};
 
-function formatResultInn(ctx: any, suggestion: Suggestion<SuggestionParty>, currentValue: string) {
+const formatResultInn = (ctx: any, suggestion: Suggestion<SuggestionParty>, currentValue: string) => {
   const inn = suggestion.data && suggestion.data.inn;
   const innPartsLength =
     suggestion.data && suggestion.data.type ? innPartsLengths[suggestion.data.type as keyof typeof innPartsLengths] : undefined;
@@ -33,7 +33,7 @@ function formatResultInn(ctx: any, suggestion: Suggestion<SuggestionParty>, curr
     formattedInn = highlightMatches(inn, currentValue);
     if (innPartsLength) {
       formattedInn = [...formattedInn];
-      innParts = innPartsLength.map(function (partLength: number) {
+      innParts = innPartsLength.map((partLength: number) => {
         let formattedPart = "";
         let ch;
 
@@ -50,7 +50,7 @@ function formatResultInn(ctx: any, suggestion: Suggestion<SuggestionParty>, curr
 
     return formattedInn;
   }
-}
+};
 
 export const PARTY_TYPE = {
   urlSuffix: "party",
@@ -87,7 +87,7 @@ export const PARTY_TYPE = {
       options.maxLength = 50;
     }
 
-    value = formattedField.call(this, value, suggestion.data?.name?.latin, currentValue, suggestion, options);
+    value = formattedField(value, suggestion.data?.name?.latin, currentValue, suggestion, options);
     value = this.wrapFormattedValue(value, suggestion);
 
     if (address) {
