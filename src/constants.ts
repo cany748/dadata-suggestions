@@ -1,10 +1,10 @@
 export const KEYS = {
-  ENTER: 13,
-  ESC: 27,
-  TAB: 9,
-  SPACE: 32,
-  UP: 38,
-  DOWN: 40,
+  ENTER: "Enter",
+  ESC: "Escape",
+  TAB: "Tab",
+  SPACE: " ",
+  UP: "ArrowUp",
+  DOWN: "ArrowDown",
 };
 
 export const CLASSES = {

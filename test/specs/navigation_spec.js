@@ -38,7 +38,7 @@ describe("Keyboard navigation", function () {
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
     await expect.poll(() => instance.visible).toBe(true);
-    helpers.keydown(input, 40);
+    helpers.keydown(input, "ArrowDown");
 
     expect(instance.selectedIndex).toBe(0);
     expect(input.value).toEqual(suggestions[0].value);
@@ -51,7 +51,7 @@ describe("Keyboard navigation", function () {
     instance.onValueChange();
     server.respond(helpers.responseFor(suggestions));
     await expect.poll(() => instance.visible).toBe(true);
-    helpers.keydown(input, 38);
+    helpers.keydown(input, "ArrowUp");
 
     expect(instance.selectedIndex).toBe(2);
     expect(input.value).toEqual(suggestions[2].value);
@@ -65,7 +65,7 @@ describe("Keyboard navigation", function () {
     server.respond(helpers.responseFor(suggestions));
     await expect.poll(() => instance.visible).toBe(true);
     instance.selectedIndex = 2;
-    helpers.keydown(input, 40);
+    helpers.keydown(input, "ArrowDown");
 
     expect(instance.selectedIndex).toBe(-1);
     expect(input.value).toEqual("A");
@@ -81,8 +81,8 @@ describe("Keyboard", () => {
     { value: "Andorra", data: "An" },
   ];
 
-  const keydown = (keyCode) => {
-    const event = new KeyboardEvent("keydown", { keyCode, which: keyCode, bubbles: true, cancelable: true });
+  const keydown = (key) => {
+    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
     input.dispatchEvent(event);
     return event;
   };
@@ -117,10 +117,10 @@ describe("Keyboard", () => {
 
   it("ESC should restore typed value and hide dropdown", async () => {
     await showSuggestions();
-    keydown(40);
+    keydown("ArrowDown");
     expect(input.value).toEqual("Afghanistan");
 
-    keydown(27);
+    keydown("Escape");
 
     expect(input.value).toEqual("A");
     expect(instance.visible).toBe(false);
@@ -131,16 +131,16 @@ describe("Keyboard", () => {
     type("Al");
     const pending = suggestRequests()[1];
 
-    keydown(27);
+    keydown("Escape");
 
     expect(pending.aborted).toBe(true);
     expect(shownValues()).toEqual([]);
   });
   it("DOWN should reopen hidden dropdown without a new request", async () => {
     await showSuggestions();
-    keydown(27);
+    keydown("Escape");
 
-    keydown(40);
+    keydown("ArrowDown");
 
     expect(shownValues()).toEqual(["Afghanistan", "Albania", "Andorra"]);
     expect(suggestRequests()).toHaveLength(1);
@@ -150,7 +150,7 @@ describe("Keyboard", () => {
     await instance.select(1);
     expect(instance.visible).toBe(false);
 
-    keydown(40);
+    keydown("ArrowDown");
 
     expect(shownValues()).toEqual(["Afghanistan", "Albania", "Andorra"]);
     expect(activeValue()).toEqual("Albania");
@@ -159,7 +159,7 @@ describe("Keyboard", () => {
     instance = new Suggestions(input, { serviceUrl, type: "country" });
     instance.setSuggestion({ value: "Albania", data: { code: "AL" } });
 
-    keydown(40);
+    keydown("ArrowDown");
 
     expect(instance.visible).toBe(false);
     expect(shownValues()).toEqual([]);
@@ -171,34 +171,34 @@ describe("Keyboard", () => {
     container.style.maxHeight = "30px";
     for (const item of container.children) item.style.height = "20px";
 
-    keydown(40);
-    keydown(40);
-    keydown(40);
+    keydown("ArrowDown");
+    keydown("ArrowDown");
+    keydown("ArrowDown");
     expect(container.scrollTop).toBeGreaterThan(0);
     const lastItem = container.lastElementChild;
     expect(lastItem.offsetTop - container.offsetTop + lastItem.offsetHeight).toBeLessThanOrEqual(
       container.scrollTop + container.clientHeight,
     );
 
-    keydown(38);
-    keydown(38);
+    keydown("ArrowUp");
+    keydown("ArrowUp");
     expect(container.scrollTop).toBe(container.firstElementChild.nextElementSibling.offsetTop - container.offsetTop);
   });
   it("UP should move to the previous suggestion", async () => {
     await showSuggestions();
-    keydown(40);
-    keydown(40);
+    keydown("ArrowDown");
+    keydown("ArrowDown");
 
-    keydown(38);
+    keydown("ArrowUp");
 
     expect(activeValue()).toEqual("Afghanistan");
     expect(input.value).toEqual("Afghanistan");
   });
   it("UP on the first suggestion should deactivate it and restore typed value", async () => {
     await showSuggestions();
-    keydown(40);
+    keydown("ArrowDown");
 
-    keydown(38);
+    keydown("ArrowUp");
 
     expect(activeValue()).toBeUndefined();
     expect(input.value).toEqual("A");
@@ -207,17 +207,17 @@ describe("Keyboard", () => {
   it("Should prevent default action of navigation keys but not of regular keys", async () => {
     await showSuggestions();
 
-    expect(keydown(40).defaultPrevented).toBe(true);
-    expect(keydown(65).defaultPrevented).toBe(false);
+    expect(keydown("ArrowDown").defaultPrevented).toBe(true);
+    expect(keydown("a").defaultPrevented).toBe(false);
   });
   it("TAB should move focus by default", async () => {
     await showSuggestions();
 
-    expect(keydown(9).defaultPrevented).toBe(false);
+    expect(keydown("Tab").defaultPrevented).toBe(false);
   });
   it("TAB should be blocked when `tabDisabled` is set", async () => {
     await showSuggestions({ tabDisabled: true });
 
-    expect(keydown(9).defaultPrevented).toBe(true);
+    expect(keydown("Tab").defaultPrevented).toBe(true);
   });
 });

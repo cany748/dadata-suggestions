@@ -127,19 +127,17 @@ const helpers = {
   createServer() {
     return new FakeServer();
   },
-  keydown(el: HTMLElement, keyCode: number) {
+  keydown(el: HTMLElement, key: string) {
     const event = new KeyboardEvent("keydown", {
-      keyCode,
-      which: keyCode,
+      key,
       bubbles: true,
       cancelable: true,
     });
     el.dispatchEvent(event);
   },
-  keyup(el: HTMLElement, keyCode: number) {
+  keyup(el: HTMLElement, key: string) {
     const event = new KeyboardEvent("keyup", {
-      keyCode,
-      which: keyCode,
+      key,
       bubbles: true,
       cancelable: true,
     });
@@ -162,7 +160,7 @@ const helpers = {
     ];
   },
   hitEnter(el: HTMLElement) {
-    helpers.keydown(el, 13); // code of Enter
+    helpers.keydown(el, "Enter");
   },
   fireBlur(el: HTMLElement) {
     const event = new FocusEvent("blur", {

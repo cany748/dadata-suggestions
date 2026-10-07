@@ -239,7 +239,7 @@ describe("Enrich", function () {
 
     server.requests.length = 0;
     instance.selectedIndex = 0;
-    helpers.keydown(input, 32); // code of Space
+    helpers.keydown(input, " ");
 
     // request for enriched suggestion not sent
     expect(server.requests.length).toEqual(0);

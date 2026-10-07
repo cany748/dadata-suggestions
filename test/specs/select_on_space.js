@@ -44,7 +44,7 @@ describe("Select on Space", function () {
 
     instance.selectedIndex = 0;
 
-    helpers.keydown(input, 32);
+    helpers.keydown(input, " ");
 
     await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), true);
@@ -65,7 +65,7 @@ describe("Select on Space", function () {
     server.respond(helpers.responseFor(suggestions));
     await expect.poll(() => instance.visible).toBe(true);
 
-    helpers.keydown(input, 32); // code of space
+    helpers.keydown(input, " ");
 
     await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(options.onSelect).toHaveBeenCalledWith(helpers.appendUnrestrictedValue(suggestions[0]), true);
@@ -87,7 +87,7 @@ describe("Select on Space", function () {
     await expect.poll(() => instance.visible).toBe(true);
 
     instance.selectedIndex = 0;
-    helpers.keydown(input, 32); // code of space
+    helpers.keydown(input, " ");
 
     expect(options.onSelect).not.toHaveBeenCalled();
   });
@@ -114,7 +114,7 @@ describe("Select on Space", function () {
     await expect.poll(() => instance.visible).toBe(true);
 
     instance.selectedIndex = 0;
-    helpers.keydown(input, 32);
+    helpers.keydown(input, " ");
 
     await expect.poll(() => options.onSelect.calls.count()).toEqual(1);
     expect(input.value).toEqual("name ");
@@ -130,8 +130,8 @@ describe("Select on Space with keyboard", () => {
     { value: "Andorra", data: "An" },
   ];
 
-  const keydown = (keyCode) => {
-    const event = new KeyboardEvent("keydown", { keyCode, which: keyCode, bubbles: true, cancelable: true });
+  const keydown = (key) => {
+    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
     input.dispatchEvent(event);
     return event;
   };
@@ -168,7 +168,7 @@ describe("Select on Space with keyboard", () => {
       const onSelect = vi.fn();
       await showSuggestions({ triggerSelectOnSpace: true, onSelect });
 
-      keydown(32);
+      keydown(" ");
 
       await expect.poll(() => input.value).toEqual("A ");
       expect(suggestRequests().map(queryOf)).toEqual(["A", "A "]);
@@ -177,10 +177,10 @@ describe("Select on Space with keyboard", () => {
 
     it("Should not intercept space typed in the middle of the value", async () => {
       await showSuggestions({ triggerSelectOnSpace: true });
-      keydown(40);
+      keydown("ArrowDown");
       input.setSelectionRange(0, 0);
 
-      expect(keydown(32).defaultPrevented).toBe(false);
+      expect(keydown(" ").defaultPrevented).toBe(false);
     });
   });
 });

@@ -46,7 +46,7 @@ describe("Adding space on selecting", function () {
       await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
-      helpers.keydown(input, 13);
+      helpers.keydown(input, "Enter");
 
       await expect.poll(() => input.value).toEqual("Name ");
     });
@@ -70,7 +70,7 @@ describe("Adding space on selecting", function () {
       await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
-      helpers.keydown(input, 13);
+      helpers.keydown(input, "Enter");
 
       await expect.poll(() => input.value).toEqual("Surname ");
     });
@@ -94,7 +94,7 @@ describe("Adding space on selecting", function () {
       await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
-      helpers.keydown(input, 13);
+      helpers.keydown(input, "Enter");
 
       await expect.poll(() => input.value).toEqual("Name Patronymic ");
     });
@@ -118,7 +118,7 @@ describe("Adding space on selecting", function () {
       await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
-      helpers.keydown(input, 13);
+      helpers.keydown(input, "Enter");
 
       await expect.poll(() => input.value).toEqual("Surname Name Patronymic");
     });
@@ -147,7 +147,7 @@ describe("Adding space on selecting", function () {
       await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
-      helpers.keydown(input, 13);
+      helpers.keydown(input, "Enter");
 
       await expect.poll(() => input.value).toEqual("Surname");
     });
@@ -178,7 +178,7 @@ describe("Adding space on selecting", function () {
       await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
-      helpers.keydown(input, 13);
+      helpers.keydown(input, "Enter");
 
       await expect.poll(() => input.value).toEqual("Surname");
     });
@@ -225,7 +225,7 @@ describe("Adding space on selecting", function () {
       await expect.poll(() => instance.visible).toBe(true);
 
       instance.selectedIndex = 0;
-      helpers.keydown(input, 13);
+      helpers.keydown(input, "Enter");
 
       await expect.poll(() => input.value).toEqual("Россия ");
     });

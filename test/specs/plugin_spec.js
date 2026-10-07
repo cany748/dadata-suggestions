@@ -449,10 +449,10 @@ describe("Typing", () => {
     respondTo(suggestRequests()[0], fixtures.A);
     await expect.poll(() => instance.visible).toBe(true);
 
-    helpers.keydown(input, 40);
-    helpers.keyup(input, 40);
-    helpers.keydown(input, 40);
-    helpers.keyup(input, 40);
+    helpers.keydown(input, "ArrowDown");
+    helpers.keyup(input, "ArrowDown");
+    helpers.keydown(input, "ArrowDown");
+    helpers.keyup(input, "ArrowDown");
 
     expect(input.value).toEqual("Albania");
     expect(suggestRequests()).toHaveLength(1);

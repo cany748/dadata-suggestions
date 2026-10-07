@@ -1162,7 +1162,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   onElementKeyDown(e: KeyboardEvent) {
     if (!this.visible) {
-      switch (e.which) {
+      switch (e.key) {
         // If suggestions are hidden and user presses arrow down, display suggestions
         case KEYS.DOWN: {
           this.suggest();
@@ -1179,7 +1179,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       return;
     }
 
-    switch (e.which) {
+    switch (e.key) {
       case KEYS.ESC: {
         this.element.value = this.currentValue;
         this.hide();
@@ -1235,7 +1235,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   }
 
   onElementKeyUp(e: KeyboardEvent) {
-    switch (e.which) {
+    switch (e.key) {
       case KEYS.UP:
       case KEYS.DOWN:
       case KEYS.ENTER: {
