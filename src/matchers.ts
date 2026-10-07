@@ -17,7 +17,7 @@ function sameParentChecker(preprocessFn: (val: any) => any) {
 
     const parentValue = preprocessFn(suggestions[0].value);
     const aliens = suggestions.filter(function (suggestion) {
-      return preprocessFn(suggestion.value).indexOf(parentValue) !== 0;
+      return !preprocessFn(suggestion.value).startsWith(parentValue);
     });
 
     return aliens.length === 0;
@@ -78,7 +78,7 @@ function minusWithPartialMatching(array1: string[], array2: string[]) {
   }
   return array1.filter(function (el) {
     return !array2.some(function (el2) {
-      return el2.indexOf(el) === 0;
+      return el2.startsWith(el);
     });
   });
 }

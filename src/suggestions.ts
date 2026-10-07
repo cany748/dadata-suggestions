@@ -1,7 +1,5 @@
 import {
   buildCacheKey,
-  delay,
-  extend,
   generateId,
   highlightMatches,
   isPlainObject,
@@ -9,7 +7,6 @@ import {
   objectsEqual,
   serialize,
   trigger,
-  trim,
   withResolvers,
 } from "./utils";
 import { CLASSES, DATA_ATTR_KEY, KEYS } from "./constants";
@@ -306,7 +303,7 @@ class ConstraintLocation {
   containsData(data) {
     let result = true;
     if (this.fields.kladr_id) {
-      return !!data.kladr_id && data.kladr_id.indexOf(this.significantKladr) === 0;
+      return !!data.kladr_id && data.kladr_id.startsWith(this.significantKladr);
     } else {
       for (const [fieldName, value] of Object.entries(this.fields)) {
         result = !!data[fieldName] && data[fieldName].toLowerCase() === (value as string).toLowerCase();
@@ -461,12 +458,10 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   setOptions(suppliedOptions) {
     if (suppliedOptions) {
-      extend(this.options, suppliedOptions);
+      Object.assign(this.options, suppliedOptions);
     }
 
-    this.type = Object.prototype.hasOwnProperty.call(types, this.options.type)
-      ? types[this.options.type as keyof typeof types]
-      : Outward(this.options.type);
+    this.type = Object.hasOwn(types, this.options.type) ? types[this.options.type as keyof typeof types] : Outward(this.options.type);
 
     // Check mandatory options
     this.requestMode = requestModes[this.options.requestMode as keyof typeof requestModes];
@@ -523,7 +518,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     let value;
 
     if (isPlainObject(suggestion) && isPlainObject(suggestion.data)) {
-      suggestion = extend(true, {}, suggestion);
+      suggestion = structuredClone(suggestion);
 
       if (that.bounds.own.length > 0) {
         that.checkValueBounds(suggestion);
@@ -609,7 +604,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
   extendedCurrentValue() {
     const parentInstance = this.getParentInstance();
     const parentValue = parentInstance ? parentInstance.extendedCurrentValue() : "";
-    const currentValue = trim(this.element.value);
+    const currentValue = this.element.value.trim();
 
     return [parentValue, currentValue].filter((e) => !!e).join(" ");
   }
@@ -666,9 +661,9 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   constructRequestParams(query, customParams) {
     const options = this.options;
-    const params = typeof options.params === "function" ? options.params.call(this.element, query) : extend({}, options.params);
+    const params = typeof options.params === "function" ? options.params.call(this.element, query) : { ...options.params };
 
-    extend(params, constructParams(this), this.constructConstraintsParams(), this.constructBoundsParams());
+    Object.assign(params, constructParams(this), this.constructConstraintsParams(), this.constructBoundsParams());
     params[options.paramName] = query;
     if (!Number.isNaN(Number.parseFloat(options.count)) && Number.isFinite(options.count) && options.count > 0) {
       params.count = options.count;
@@ -677,7 +672,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       params.language = options.language;
     }
 
-    return extend(params, customParams);
+    return Object.assign(params, customParams);
   }
 
   updateSuggestions(query) {
@@ -776,7 +771,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     }
 
     for (const query of this.badQueries) {
-      if (q.indexOf(query) === 0) {
+      if (q.startsWith(query)) {
         return true;
       }
     }
@@ -1004,7 +999,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
         if (status?.search) {
           const plan = response.headers.get("X-Plan");
           status.plan = plan;
-          extend(that.status, status);
+          Object.assign(that.status, status);
         } else {
           triggerError(new Error("Service Unavailable"));
         }
@@ -1024,7 +1019,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   setBoundsOptions(this: Suggestions) {
     const that = this;
-    const newBounds = trim(that.options.bounds).split("-");
+    const newBounds = (that.options.bounds || "").trim().split("-");
     let boundFrom = newBounds[0];
     let boundTo = newBounds.at(-1);
     const boundsOwn = [];
@@ -1124,7 +1119,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       }
     }
 
-    return kladrId.slice(0, Math.max(0, kladrFormat.digits)) + Array.from({ length: (kladrFormat.zeros || 0) + 1 }).join("0");
+    return kladrId.slice(0, Math.max(0, kladrFormat.digits)) + "0".repeat(kladrFormat.zeros || 0);
   }
 
   bindElementEvents() {
@@ -1263,7 +1258,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     if (this.options.deferRequestBy > 0) {
       // Defer lookup in case when value changes very quickly:
-      this.onChangeTimeout = delay(() => {
+      this.onChangeTimeout = setTimeout(() => {
         this.onChangeTimeout = null;
         this.onValueChange();
       }, this.options.deferRequestBy);
@@ -1426,13 +1421,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     const hasSameValues = that.hasSameValues(suggestion);
 
     return that.enrichSuggestion(suggestion, selectionOptions).then(([enrichedSuggestion, hasBeenEnriched]) => {
-      const newSelectionOptions = extend(
-        {
-          hasBeenEnriched,
-          hasSameValues,
-        },
-        selectionOptions,
-      );
+      const newSelectionOptions = { hasBeenEnriched, hasSameValues, ...selectionOptions };
       that.selectSuggestion(enrichedSuggestion, index, currentValue, newSelectionOptions);
     });
   }
@@ -1610,7 +1599,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
     return (
       that.suggestions.length > 1 ||
-      (that.suggestions.length === 1 && (!that.selection || trim(that.suggestions[0].value) !== trim(that.selection.value)))
+      (that.suggestions.length === 1 && (!that.selection || that.suggestions[0].value.trim() !== that.selection.value.trim()))
     );
   }
 
@@ -1864,7 +1853,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   constructConstraintsParams() {
     const that = this;
-    let locations = [];
+    const locations = [];
     let constraints = that.constraints;
     let parentInstance;
     let parentData;
@@ -1893,7 +1882,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
       }
     } else if (constraints && isPlainObject(constraints)) {
       for (const constraint of Object.values(constraints) as Constraint[]) {
-        locations = locations.concat(constraint.getFields());
+        locations.push(...constraint.getFields());
       }
 
       if (locations.length > 0) {

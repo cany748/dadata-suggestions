@@ -15,51 +15,6 @@ export function isPlainObject(value: unknown) {
   return proto === null || proto === Object.prototype;
 }
 
-/**
- * Глубокое клонирование и слияние объектов (аналог $.extend)
- */
-export function extend<T extends object>(deep: boolean, target: T, ...sources: any[]): T;
-export function extend<T extends object>(target: T, ...sources: any[]): T;
-export function extend(...args: any[]): any {
-  let deep = false;
-  let i = 0;
-
-  if (typeof args[0] === "boolean") {
-    deep = args[0];
-    i = 1;
-  }
-
-  const target = args[i] || {};
-  i++;
-
-  for (; i < args.length; i++) {
-    const source = args[i];
-    if (source == null) continue;
-
-    for (const key of Object.keys(source)) {
-      const srcVal = source[key];
-      const tgtVal = target[key];
-
-      // Avoid infinite loop
-      if (srcVal === target) continue;
-
-      if (deep && srcVal && (isPlainObject(srcVal) || Array.isArray(srcVal))) {
-        let clone: any;
-        if (Array.isArray(srcVal)) {
-          clone = Array.isArray(tgtVal) ? tgtVal : [];
-        } else {
-          clone = isPlainObject(tgtVal) ? tgtVal : {};
-        }
-        target[key] = extend(deep, clone, srcVal);
-      } else if (srcVal !== undefined) {
-        target[key] = srcVal;
-      }
-    }
-  }
-
-  return target;
-}
-
 let idCounter = 0;
 /**
  * Возвращает автоинкрементный идентификатор.
@@ -110,19 +65,10 @@ export const withResolvers = <T>() => {
   return { promise, resolve, reject };
 };
 
-/**
- * Выполняет функцию с указанной задержкой.
- */
-export function delay(handler: () => any, delay = 0) {
-  return setTimeout(handler, delay);
-}
-
 export function buildCacheKey(params = {} as Record<string, any>) {
   const keys = Object.keys(params).sort();
   return keys.map((key) => `${key}=${JSON.stringify(params[key])}`).join("&");
 }
-
-export const trim = (text: string) => (text == null ? "" : text.replace(/^\s+|(\S)\s+$/g, "$1"));
 
 export function objectsEqual(a: Record<string, any>, b: Record<string, any>) {
   if (a === b) return true;
@@ -136,7 +82,7 @@ export function objectsEqual(a: Record<string, any>, b: Record<string, any>) {
 
     for (i = length; i-- !== 0; ) {
       const key = keys[i];
-      if (!key || !Object.prototype.hasOwnProperty.call(b, key)) return false;
+      if (!key || !Object.hasOwn(b, key)) return false;
     }
 
     for (i = length; i-- !== 0; ) {
@@ -266,7 +212,7 @@ const escapeHtmlMap = {
 function escapeHtml(str: string) {
   if (str) {
     for (const [ch, html] of Object.entries(escapeHtmlMap)) {
-      str = str.replace(new RegExp(ch, "g"), html);
+      str = str.replaceAll(ch, html);
     }
   }
   return str;
@@ -321,11 +267,7 @@ export function highlightMatches(value: string, currentValue: string, options?: 
   // use simple loop because length can change
   for (i = 0; i < chunks.length; i++) {
     chunk = chunks[i];
-    if (
-      chunk.matchable &&
-      !chunk.matched &&
-      ((unformattableTokens == null ? -1 : unformattableTokens.indexOf(chunk.formatted)) === -1 || chunk.hasUpperCase)
-    ) {
+    if (chunk.matchable && !chunk.matched && (!unformattableTokens?.includes(chunk.formatted) || chunk.hasUpperCase)) {
       for (const [, matcher] of tokenMatchers.entries()) {
         const $tokenMatch = matcher.exec(chunk.formatted)!;
         let length;
