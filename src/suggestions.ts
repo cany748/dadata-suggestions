@@ -59,6 +59,30 @@ export const DEFAULT_OPTIONS = {
 
 type ResolvedOptions<T extends string> = Options<T> & Required<Pick<Options<T>, keyof typeof DEFAULT_OPTIONS>>;
 
+type SelectionOptions = {
+  /** Не скрывать список после выбора */
+  continueSelecting?: boolean;
+  /** Не добавлять пробел в конец значения */
+  noSpace?: boolean;
+  dontEnrich?: boolean;
+  hasBeenEnriched?: boolean;
+  /** В списке есть другие подсказки с таким же значением */
+  hasSameValues?: boolean;
+};
+
+type ServiceMethod = keyof typeof serviceMethods;
+
+type RequestOptions = {
+  /** Не вызывать колбэки `onSearchStart`, `onSearchComplete`, `onSearchError` */
+  noCallbacks?: boolean;
+  useEnrichmentCache?: boolean;
+  method?: ServiceMethod;
+};
+
+type SuggestionsResponse = { suggestions: Suggestion<any>[] };
+
+type TriggerEvent = "Select" | "SelectNothing" | "InvalidateSelection";
+
 type Bounds = {
   from: string | undefined;
   to: string | undefined;
@@ -75,7 +99,7 @@ const serviceMethods = {
   "iplocate/address": { httpMethod: "GET", addTypeInUrl: false },
   status: { httpMethod: "GET", addTypeInUrl: true },
   findById: { httpMethod: "POST", addTypeInUrl: true },
-};
+} as const;
 
 export class HttpError extends Error {
   response: Response;
@@ -118,8 +142,6 @@ const fetchJson = (url: string, init: RequestInit, timeout: number) => {
 
 /**
  * Compares two suggestion objects
- * @param suggestion
- * @param instance other Suggestions instance
  */
 const belongsToArea = (suggestion: Suggestion<any>, instance: Suggestions<any>) => {
   const parentData = instance.selection?.data;
@@ -142,9 +164,9 @@ const requestModes = {
     updateValue: false,
     enrichmentEnabled: false,
   },
-};
+} as const;
 
-let statusRequests = {} as Record<string, any>;
+let statusRequests: Record<string, ReturnType<typeof fetchJson>> = {};
 let locationRequest: ReturnType<typeof fetchJson> | null = null;
 let detectedLocation: { kladr_id: string } | null = null;
 
@@ -163,8 +185,6 @@ const fiasParamNames = [
 /**
  * Возвращает КЛАДР-код, обрезанный до последнего непустого уровня
  * 50 000 040 000 00 → 50 000 040
- * @param {string} kladrId
- * @returns {string}
  */
 const getSignificantKladrId = (kladrId: string) => {
   const significantKladrId = kladrId.replace(/^(\d{2})(\d*?)(0+)$/g, "$1$2");
@@ -198,11 +218,6 @@ const intersect = (array1: string[], array2: string[]) => {
   return array1.filter((el) => array2.includes(el));
 };
 
-/**
- * @param {Object} data  fields
- * @param {Suggestions} instance
- * @constructor
- */
 class ConstraintLocation {
   instance: Suggestions<any>;
   fields: GeoLocation;
@@ -259,8 +274,6 @@ class ConstraintLocation {
   /**
    * Возвращает specificity для КЛАДР
    * Описание ниже, в getFiasSpecificity
-   * @param kladrId
-   * @returns {number}
    */
   getKladrSpecificity(kladrId: string) {
     let specificity = -1;
@@ -282,9 +295,6 @@ class ConstraintLocation {
    * В выпадашке нажимаем на "г. Сочи"
    * Если restrict_value отключен, то выведется значение "Краснодарский край, г Сочи"
    * Если включен, то просто "г Сочи"
-   *
-   * @param fiasFieldNames
-   * @returns {number}
    */
   getFiasSpecificity(fiasFieldNames: string[]) {
     let specificity = -1;
@@ -310,14 +320,6 @@ class ConstraintLocation {
   }
 }
 
-/**
- * @param {Object} data
- * @param {Object|Array} data.locations
- * @param {string} [data.label]
- * @param {boolean} [data.deletable]
- * @param {Suggestions} [instance]
- * @constructor
- */
 class Constraint {
   id: string;
   deletable: boolean;
@@ -351,6 +353,19 @@ class Constraint {
 class Suggestions<T extends string = keyof SuggestionMap> {
   static ConstraintLocation = ConstraintLocation;
 
+  static resetLocation() {
+    locationRequest = null;
+    detectedLocation = null;
+    DEFAULT_OPTIONS.geoLocation = true;
+  }
+
+  static resetTokens() {
+    for (const request of Object.values(statusRequests)) {
+      request.abort();
+    }
+    statusRequests = {};
+  }
+
   public element: HTMLInputElement;
   public suggestions: Suggestion<any>[];
   public badQueries: string[];
@@ -363,7 +378,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   public fetchPhase: Promise<Suggestion<any>[] | undefined>;
   public onChangeTimeout: ReturnType<typeof setTimeout> | null;
   public triggering: Record<string, boolean>;
-  public wrapper: HTMLElement | null;
+  public wrapper!: HTMLElement;
   public options: ResolvedOptions<T>;
   public classes: typeof CLASSES;
   public selection: Suggestion<any> | null;
@@ -373,7 +388,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   public geoLocation: GeoLocation | GeoLocation[] | null;
   public bounds!: Bounds;
   public constraints!: Record<string, Constraint> | HTMLElement;
-  public container: HTMLElement | null;
+  public container!: HTMLElement;
   public cancelFocus: boolean;
   public visible: boolean;
   public dropdownDisabled: boolean;
@@ -393,8 +408,6 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     this.fetchPhase = new Promise(() => {});
     this.onChangeTimeout = null;
     this.triggering = {};
-    this.wrapper = null;
-    this.container = null;
     this.options = { ...DEFAULT_OPTIONS, ...options };
     this.classes = CLASSES;
     this.selection = null;
@@ -507,7 +520,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
   }
 
-  setSuggestion(suggestion) {
+  setSuggestion(suggestion: Suggestion<any>) {
     let data;
     let value;
 
@@ -542,7 +555,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   fixData() {
     const fullQuery = this.extendedCurrentValue();
     const currentValue = this.element.value;
-    let request: Promise<any[] | undefined> = Promise.resolve();
+    let request: Promise<Suggestion<any>[] | undefined> = Promise.resolve([]);
     if (this.isQueryRequestable(fullQuery)) {
       this.currentValue = fullQuery;
       request = this.getSuggestions(fullQuery, {
@@ -573,9 +586,9 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Looks up parent instances
-   * @returns {String} current value prepended by parents' values
+   * @returns current value prepended by parents' values
    */
-  extendedCurrentValue() {
+  extendedCurrentValue(): string {
     const parentInstance = this.getParentInstance();
     const parentValue = parentInstance ? parentInstance.extendedCurrentValue() : "";
     const currentValue = this.element.value.trim();
@@ -623,7 +636,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     );
   }
 
-  isQueryRequestable(query) {
+  isQueryRequestable(query: string) {
     let result = query.length >= this.options.minChars;
 
     if (result && this.type.isQueryRequestable) {
@@ -633,13 +646,13 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return result;
   }
 
-  constructRequestParams(query, customParams) {
+  constructRequestParams(query: string, customParams?: Record<string, unknown>) {
     const options = this.options;
     const params = typeof options.params === "function" ? options.params.call(this.element, query) : { ...options.params };
 
     Object.assign(params, this.constructLocationParams(), this.constructConstraintsParams(), this.constructBoundsParams());
     params[options.paramName] = query;
-    if (!Number.isNaN(Number.parseFloat(options.count)) && Number.isFinite(options.count) && options.count > 0) {
+    if (Number.isFinite(options.count) && options.count > 0) {
       params.count = options.count;
     }
     if (options.language) {
@@ -649,10 +662,10 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return Object.assign(params, customParams);
   }
 
-  updateSuggestions(query) {
+  updateSuggestions(query: string) {
     this.fetchPhase = this.getSuggestions(query).then((suggestions) => {
       if (suggestions) {
-        this.assignSuggestions(suggestions, query);
+        this.assignSuggestions(suggestions);
       }
       return suggestions;
     });
@@ -660,14 +673,9 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Get suggestions from cache or from server
-   * @param {String} query
-   * @param {Object} customParams parameters specified here will be passed to request body
-   * @param {Object} requestOptions
-   * @param {Boolean} [requestOptions.noCallbacks]  flag, request competence callbacks will not be invoked
-   * @param {Boolean} [requestOptions.useEnrichmentCache]
    * @return suggestions or `undefined` if nothing was fetched
    */
-  async getSuggestions(query: string, customParams?: object, requestOptions?: object) {
+  async getSuggestions(query: string, customParams?: Record<string, unknown>, requestOptions?: RequestOptions) {
     const options = this.options;
     const noCallbacks = requestOptions && requestOptions.noCallbacks;
     const useEnrichmentCache = requestOptions && requestOptions.useEnrichmentCache;
@@ -702,7 +710,9 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       // Cache results if cache is not disabled:
       if (!options.noCache) {
         if (useEnrichmentCache) {
-          this.enrichmentCache[query] = response.suggestions[0];
+          if (response.suggestions[0]) {
+            this.enrichmentCache[query] = response.suggestions[0];
+          }
         } else {
           this.enrichResponse(response, query);
           this.cachedResponse[cacheKey] = response;
@@ -720,7 +730,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return suggestions;
   }
 
-  doGetSuggestions(params: object, method: string) {
+  doGetSuggestions(params: object, method: ServiceMethod) {
     const request = this.request(method, params);
 
     this.abortRequest();
@@ -736,7 +746,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return request;
   }
 
-  isBadQuery(q) {
+  isBadQuery(q: string) {
     if (!this.options.preventBadQueries) {
       return false;
     }
@@ -757,12 +767,11 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Checks response format and data
-   * @return {Boolean} response contains acceptable data
    */
-  processResponse(response) {
+  processResponse(response: unknown): response is SuggestionsResponse {
     let suggestions;
 
-    if (!response || !Array.isArray(response.suggestions)) {
+    if (!isPlainObject(response) || !Array.isArray(response.suggestions)) {
       return false;
     }
 
@@ -779,7 +788,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return true;
   }
 
-  verifySuggestionsFormat(suggestions) {
+  verifySuggestionsFormat(suggestions: unknown[]) {
     if (typeof suggestions[0] === "string") {
       for (let i = 0; i < suggestions.length; i++) {
         suggestions[i] = { value: suggestions[i], data: null };
@@ -789,14 +798,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Gets string to set as input value
-   *
-   * @param suggestion
-   * @param {Object} [selectionOptions]
-   * @param {boolean} selectionOptions.hasBeenEnriched
-   * @param {boolean} selectionOptions.hasSameValues
-   * @return {string}
    */
-  getSuggestionValue(suggestion, selectionOptions) {
+  getSuggestionValue(suggestion: Suggestion<any>, selectionOptions?: SelectionOptions) {
     const formatSelected = this.options.formatSelected || this.type.formatSelected;
     const hasSameValues = selectionOptions && selectionOptions.hasSameValues;
     const hasBeenEnriched = selectionOptions && selectionOptions.hasBeenEnriched;
@@ -826,7 +829,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return formattedValue;
   }
 
-  hasSameValues(suggestion) {
+  hasSameValues(suggestion: Suggestion<any>) {
     for (const anotherSuggestion of this.suggestions) {
       if (anotherSuggestion.value === suggestion.value && anotherSuggestion !== suggestion) {
         return true;
@@ -835,7 +838,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return false;
   }
 
-  assignSuggestions(suggestions, query) {
+  assignSuggestions(suggestions: Suggestion<any>[]) {
     this.suggestions = suggestions;
     this.suggest();
     this.selectFoundSuggestion();
@@ -850,7 +853,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   /**
    * Fills suggestion.unrestricted_value property
    */
-  setUnrestrictedValues(suggestions) {
+  setUnrestrictedValues(suggestions: Suggestion<any>[]) {
     const shouldRestrict = this.shouldRestrictValues();
     const label = this.getFirstConstraintLabel();
 
@@ -861,7 +864,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
   }
 
-  areSuggestionsSame(a, b) {
+  areSuggestionsSame(a: Suggestion<any> | null, b: Suggestion<any> | null) {
     return a && b && a.value === b.value && objectsEqual(a.data, b.data);
   }
 
@@ -872,11 +875,12 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return this.options.noSuggestionsHint || this.type.noSuggestionsHint;
   }
 
-  async enrichSuggestion(suggestion, selectionOptions): Promise<[any, boolean?]> {
+  async enrichSuggestion(suggestion: Suggestion<any>, selectionOptions?: SelectionOptions): Promise<[Suggestion<any>, boolean?]> {
     if (
       !this.options.enrichmentEnabled ||
       !this.type.enrichmentEnabled ||
       !this.requestMode.enrichmentEnabled ||
+      !this.type.getEnrichmentQuery ||
       (selectionOptions && selectionOptions.dontEnrich)
     ) {
       return [suggestion];
@@ -914,7 +918,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   /**
    * Injects enriched suggestion into response
    */
-  enrichResponse(response, query) {
+  enrichResponse(response: SuggestionsResponse, query: string) {
     const enrichedSuggestion = this.enrichmentCache[query];
 
     if (enrichedSuggestion) {
@@ -927,7 +931,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
   }
 
-  checkStatus(this: Suggestions) {
+  checkStatus() {
     const token = (this.options.token && this.options.token.trim()) || "";
     const requestKey = this.options.type + token;
     let request = statusRequests[requestKey];
@@ -939,7 +943,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     type Status = {
       count: number;
       name: "address" | "fio";
-      plan: string;
+      plan: string | null;
       resources: { name: string; version: string }[];
       search: boolean;
       state: "ENABLED";
@@ -954,7 +958,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     };
 
     request.then(
-      ({ data: status, response }) => {
+      ({ data: status, response }: { data: Status | null; response: Response }) => {
         if (status?.search) {
           const plan = response.headers.get("X-Plan");
           status.plan = plan;
@@ -1000,7 +1004,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   }
 
   constructLocationParams() {
-    const params = {};
+    const params: { locations_boost?: GeoLocation[] } = {};
 
     if (this.geoLocation) {
       const locationData = this.geoLocation;
@@ -1071,7 +1075,6 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   /**
    * Подстраивает suggestion.value под this.bounds.own
    * Ничего не возвращает, меняет в самом suggestion
-   * @param suggestion
    */
   checkValueBounds(suggestion: Suggestion<any>) {
     let valueData;
@@ -1123,7 +1126,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     const { signal } = this.abortController;
     this.element.addEventListener("keydown", (e) => this.onElementKeyDown(e), { signal });
     this.element.addEventListener("keyup", (e) => this.onElementKeyUp(e), { signal });
-    this.element.addEventListener("input", (e) => this.onElementKeyUp(e as KeyboardEvent), { signal });
+    this.element.addEventListener("input", (e) => this.onElementKeyUp(e as InputEvent), { signal });
     this.element.addEventListener("blur", () => this.onElementBlur(), { signal });
     this.element.addEventListener("focus", () => this.onElementFocus(), { signal });
   }
@@ -1231,8 +1234,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     e.preventDefault();
   }
 
-  onElementKeyUp(e: KeyboardEvent) {
-    switch (e.key) {
+  onElementKeyUp(e: KeyboardEvent | InputEvent) {
+    switch ("key" in e ? e.key : undefined) {
       case KEYS.UP:
       case KEYS.DOWN:
       case KEYS.ENTER: {
@@ -1316,10 +1319,9 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Selects current or first matched suggestion, but firstly waits for data ready
-   * @param selectionOptions
    * @returns index of selected suggestion or -1 if nothing matched
    */
-  async selectCurrentValue(selectionOptions?) {
+  async selectCurrentValue(selectionOptions?: SelectionOptions) {
     // force onValueChange to be executed if it has been deferred
     if (this.onChangeTimeout) {
       clearTimeout(this.onChangeTimeout);
@@ -1350,7 +1352,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Selects current or first matched suggestion
-   * @returns {number} index of found suggestion
+   * @returns index of found suggestion
    */
   findSuggestionIndex() {
     let index = this.selectedIndex;
@@ -1372,11 +1374,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   /**
    * Selects a suggestion at specified index
    * @param index index of suggestion to select. Can be -1
-   * @param {Object} selectionOptions
-   * @param {boolean} [selectionOptions.continueSelecting]  prevents hiding after selection
-   * @param {boolean} [selectionOptions.noSpace]  prevents adding space at the end of current value
    */
-  async select(index, selectionOptions?) {
+  async select(index: number, selectionOptions?: SelectionOptions) {
     const suggestion = this.suggestions[index];
     const continueSelecting = selectionOptions && selectionOptions.continueSelecting;
     const currentValue = this.currentValue;
@@ -1401,16 +1400,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Formats and selects final (enriched) suggestion
-   * @param suggestion
-   * @param index
-   * @param lastValue
-   * @param {Object} selectionOptions
-   * @param {boolean} [selectionOptions.continueSelecting]  prevents hiding after selection
-   * @param {boolean} [selectionOptions.noSpace]  prevents adding space at the end of current value
-   * @param {boolean} selectionOptions.hasBeenEnriched
-   * @param {boolean} selectionOptions.hasSameValues
    */
-  selectSuggestion(suggestion, index, lastValue, selectionOptions) {
+  selectSuggestion(suggestion: Suggestion<any>, index: number, lastValue: string, selectionOptions: SelectionOptions) {
     let continueSelecting = selectionOptions.continueSelecting;
     const assumeDataComplete = !this.type.isDataComplete || this.type.isDataComplete.call(this, suggestion);
     const currentSelection = this.selection;
@@ -1453,7 +1444,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     this.shareWithParent(suggestion);
   }
 
-  onSelectComplete(continueSelecting: boolean) {
+  onSelectComplete(continueSelecting?: boolean) {
     if (continueSelecting) {
       this.selectedIndex = -1;
       this.updateSuggestions(this.currentValue);
@@ -1468,8 +1459,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
   }
 
-  trigger(event: string, ...args: any[]) {
-    const callback = this.options[`on${event}`];
+  trigger(event: TriggerEvent, ...args: unknown[]) {
+    const callback = this.options[`on${event}`] as ((...callbackArgs: unknown[]) => void) | null | undefined;
 
     this.triggering[event] = true;
     if (typeof callback === "function") {
@@ -1513,9 +1504,9 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   /**
    * Listen for click event on suggestions list:
    */
-  onSuggestionClick(e) {
+  onSuggestionClick(e: MouseEvent) {
     let el = e.target as HTMLElement | null;
-    let index: string | null = null;
+    let index: string | undefined;
 
     if (!this.dropdownDisabled) {
       this.cancelFocus = true;
@@ -1539,7 +1530,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return [...this.container.querySelectorAll(`.${this.classes.suggestion}`)] as HTMLElement[];
   }
 
-  toggleDropdownEnabling(enable) {
+  toggleDropdownEnabling(enable: boolean) {
     this.dropdownDisabled = !enable;
     if (this.container) {
       if (enable) {
@@ -1560,12 +1551,11 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Shows if there are any suggestions besides currently selected
-   * @returns {boolean}
    */
   hasSuggestionsToChoose() {
     return (
       this.suggestions.length > 1 ||
-      (this.suggestions.length === 1 && (!this.selection || this.suggestions[0].value.trim() !== this.selection.value.trim()))
+      (this.suggestions.length === 1 && (!this.selection || this.suggestions[0]!.value.trim() !== this.selection.value.trim()))
     );
   }
 
@@ -1586,7 +1576,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       this.selectedIndex = -1;
       // Build suggestions inner HTML:
       for (const [i, suggestion] of this.suggestions.entries()) {
-        if (suggestion == this.selection) {
+        if (suggestion === this.selection) {
           this.selectedIndex = i;
         }
         this.buildSuggestionHtml(suggestion, i, html);
@@ -1628,7 +1618,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     this.visible = true;
   }
 
-  buildSuggestionHtml(suggestion, ordinal, html) {
+  buildSuggestionHtml(suggestion: Suggestion<any>, ordinal: number, html: string[]) {
     html.push(`<div class="${this.classes.suggestion}" data-index="${ordinal}">`);
 
     const formatResult = this.options.formatResult || this.type.formatResult || this.formatResult;
@@ -1646,13 +1636,13 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     html.push("</div>");
   }
 
-  wrapFormattedValue(value, suggestion) {
+  wrapFormattedValue(value: string, suggestion: Suggestion<any>) {
     const status = suggestion.data?.state?.status;
 
     return `<span class="${this.classes.value}"${status ? ` data-suggestion-status="${status}"` : ""}>${value}</span>`;
   }
 
-  formatResult(value, currentValue, suggestion, options) {
+  formatResult(value: string, currentValue: string, suggestion: Suggestion<any>, options: { unformattableTokens?: string[] }) {
     value = highlightMatches(value, currentValue, options);
 
     return this.wrapFormattedValue(value, suggestion);
@@ -1667,7 +1657,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
   }
 
-  activate(index) {
+  activate(index: number) {
     const selected = this.classes.selected;
 
     if (!this.dropdownDisabled) {
@@ -1691,7 +1681,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return null;
   }
 
-  deactivate(restoreValue) {
+  deactivate(restoreValue: boolean) {
     if (!this.dropdownDisabled) {
       this.selectedIndex = -1;
       for (const item of this.getSuggestionsItems()) {
@@ -1734,7 +1724,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     this.adjustScroll(this.selectedIndex + 1);
   }
 
-  adjustScroll(index) {
+  adjustScroll(index: number) {
     const activeItem = this.activate(index);
 
     if (!activeItem || !this.container) {
@@ -1754,7 +1744,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       }
     }
 
-    this.element.value = this.suggestions[index].value;
+    this.element.value = this.suggestions[index]!.value;
   }
 
   createConstraints() {
@@ -1845,7 +1835,6 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   /**
    * Returns label of the first constraint (if any), empty string otherwise
-   * @returns {String}
    */
   getFirstConstraintLabel() {
     if (this.constraints instanceof HTMLElement) {
@@ -1895,7 +1884,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return null;
   }
 
-  shareWithParent(suggestion) {
+  shareWithParent(suggestion: Suggestion<any>) {
     const parentInstance = this.getParentInstance();
 
     if (!parentInstance || parentInstance.type !== this.type || belongsToArea(suggestion, parentInstance)) {
@@ -1949,20 +1938,5 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return unrestrictedData;
   }
 }
-
-const defaultGeoLocation = true;
-
-Suggestions.resetLocation = () => {
-  locationRequest = null;
-  detectedLocation = null;
-  DEFAULT_OPTIONS.geoLocation = defaultGeoLocation;
-};
-
-Suggestions.resetTokens = () => {
-  for (const req of Object.values(statusRequests)) {
-    req.abort();
-  }
-  statusRequests = {};
-};
 
 export { Suggestions };

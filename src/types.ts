@@ -732,11 +732,13 @@ export type SuggestionsType<T> = {
   geoEnabled?: boolean;
   /** Делает отправку дополнительного запроса при выборе подсказки */
   enrichmentEnabled?: boolean;
-  enrichmentMethod?: string;
+  enrichmentMethod?: "suggest" | "findById";
   enrichmentParams?: any;
   getEnrichmentQuery?: (suggestion: Suggestion<T>) => string;
   /** Возвращает html для подсказки. Переопределяет метод по умолчанию */
   formatResult?: (value: string, currentValue: string, suggestion: Suggestion<T>, options: any) => string;
+  /** Возвращает значение для поля ввода. Переопределяет `suggestion.value` */
+  formatSelected?: (suggestion: Suggestion<T>) => string | null;
   /** Проверяет, можно ли использовать suggestion.data как полные данные своего типа. */
   isDataComplete?: (suggestion: Suggestion<T>) => boolean;
   /** Проверяет, подходит ли запрос для сервера */
