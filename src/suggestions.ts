@@ -8,7 +8,7 @@ import { EMAIL_TYPE } from "./types/email";
 import { BANK_TYPE } from "./types/bank";
 import { FMS_TYPE } from "./types/fms";
 import { Outward } from "./types/outward";
-import type { Options, Suggestion, SuggestionAny, SuggestionMap } from "./types";
+import type { GeoLocation, Options, Suggestion, SuggestionMap, SuggestionsType } from "./types";
 
 const types = {
   NAME: NAME_TYPE,
@@ -21,15 +21,14 @@ const types = {
 
 export const DEFAULT_OPTIONS = {
   autoSelectFirst: false,
-  containerClass: "suggestions-suggestions",
   count: 5,
   deferRequestBy: 100,
   enrichmentEnabled: true,
   formatResult: null,
   formatSelected: null,
+  geoLocation: false as boolean,
   headers: null,
   hint: "Выберите вариант или продолжите ввод",
-  initializeInterval: 100,
   language: null,
   minChars: 1,
   mobileWidth: 600,
@@ -53,11 +52,12 @@ export const DEFAULT_OPTIONS = {
   triggerSelectOnBlur: true,
   triggerSelectOnEnter: true,
   triggerSelectOnSpace: false,
-  type: null,
   // url, который заменяет serviceUrl + method + type
   // то есть, если он задан, то для всех запросов будет использоваться именно он
   url: null,
-};
+} satisfies Partial<Options>;
+
+type ResolvedOptions<T extends string> = Options<T> & Required<Pick<Options<T>, keyof typeof DEFAULT_OPTIONS>>;
 
 const serviceMethods = {
   suggest: { httpMethod: "POST", addTypeInUrl: true },
@@ -344,34 +344,34 @@ class Constraint {
   }
 }
 
-class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
+class Suggestions<T extends string = keyof SuggestionMap> {
   public element: HTMLInputElement;
-  public suggestions: Suggestion<SuggestionAny>[];
+  public suggestions: Suggestion<any>[];
   public badQueries: string[];
   public selectedIndex: number;
   public currentValue: string;
-  public cachedResponse: Record<string, any>;
-  public enrichmentCache: Record<string, any>;
+  public cachedResponse: Record<string, { suggestions: Suggestion<any>[] }>;
+  public enrichmentCache: Record<string, Suggestion<any>>;
   public abortController: AbortController;
   public parentAbortController: AbortController | null;
-  public fetchPhase: any;
-  public onChangeTimeout: number | null;
-  public triggering: Record<string, any>;
+  public fetchPhase: Promise<Suggestion<any>[] | undefined>;
+  public onChangeTimeout: ReturnType<typeof setTimeout> | null;
+  public triggering: Record<string, boolean>;
   public wrapper: HTMLElement | null;
-  public options: any;
+  public options: ResolvedOptions<T>;
   public classes: typeof CLASSES;
-  public selection: any;
-  public type: any;
-  public status: Record<string, any>;
-  public currentRequest: any;
-  public geoLocation: any;
+  public selection: Suggestion<any> | null;
+  public type!: SuggestionsType<any>;
+  public status: Record<string, unknown>;
+  public currentRequest: ReturnType<typeof fetchJson> | null;
+  public geoLocation: GeoLocation | GeoLocation[] | null;
   public bounds: any;
   public constraints: any;
   public container: HTMLElement | null;
   public cancelFocus: boolean;
   public visible: boolean;
   public dropdownDisabled: boolean;
-  public requestMode: any;
+  public requestMode!: (typeof requestModes)[keyof typeof requestModes];
 
   constructor(el: HTMLInputElement, options: Options<T>) {
     // Shared variables:
@@ -392,13 +392,12 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     this.options = { ...DEFAULT_OPTIONS, ...options };
     this.classes = CLASSES;
     this.selection = null;
-    this.type = null;
     this.status = {};
     this.currentRequest = null;
+    this.geoLocation = null;
     this.cancelFocus = false;
     this.visible = false;
     this.dropdownDisabled = false;
-    this.requestMode = null;
 
     // if it stops working, see https://stackoverflow.com/q/15738259
     // chrome is constantly changing this logic
@@ -415,7 +414,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     this.createContainer();
     this.createConstraints();
     this.setupBounds();
-    this.setOptions(undefined);
+    this.setOptions();
     this.showContainer();
   }
 
@@ -447,7 +446,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
 
   // Configuration methods
 
-  setOptions(suppliedOptions) {
+  setOptions(suppliedOptions?: Partial<Options<T>>) {
     if (suppliedOptions) {
       Object.assign(this.options, suppliedOptions);
     }
@@ -972,7 +971,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
     }
 
     this.geoLocation = detectedLocation;
-    if (isPlainObject(providedLocation) || Array.isArray(providedLocation)) {
+    if (typeof providedLocation === "object") {
       this.geoLocation = providedLocation;
     } else {
       if (!locationRequest) {
@@ -1066,7 +1065,7 @@ class Suggestions<T extends keyof SuggestionMap = keyof SuggestionMap> {
    * Ничего не возвращает, меняет в самом suggestion
    * @param suggestion
    */
-  checkValueBounds(this: Suggestions, suggestion: Suggestion<SuggestionAny>) {
+  checkValueBounds(this: Suggestions, suggestion: Suggestion<any>) {
     let valueData;
 
     // If any bounds set up

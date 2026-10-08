@@ -1,4 +1,5 @@
 import type { DataComponents } from "./types/address";
+import type { Suggestions } from "./suggestions";
 
 export type Suggestion<T> = {
   value: string;
@@ -746,19 +747,86 @@ export type SuggestionsType<T> = {
   getSuggestionValue?: (instance: any, options: any) => string | null;
 };
 
-export type Options<T extends keyof SuggestionMap = keyof SuggestionMap> = {
-  token: string;
+/** Данные подсказки: для известных типов — из `SuggestionMap`, для остальных неизвестны */
+export type SuggestionData<T extends string> = T extends keyof SuggestionMap ? SuggestionMap[T] : unknown;
+
+export type GeoLocation = Record<string, string | number>;
+
+export type ConstraintOptions = {
+  label?: string;
+  deletable?: boolean;
+  locations?: GeoLocation | GeoLocation[];
+  /** Устаревшее название `locations` */
+  restrictions?: GeoLocation | GeoLocation[];
+};
+
+export type Options<T extends string = keyof SuggestionMap> = {
+  /** Тип подсказок: `NAME`, `ADDRESS`, `PARTY`, `EMAIL`, `BANK`, `FMS` или произвольный суффикс URL */
   type: T;
-  params?: Record<string, any>;
-  bounds?: string; // TODO:
-  constraints?: string;
-  triggerSelectOnSpace?: boolean;
+  /** API-ключ DaData */
+  token?: string | null;
+  /** Значение заголовка `X-Partner` */
+  partner?: string;
+  serviceUrl?: string;
+  /** Адрес, который заменяет `serviceUrl` + метод + тип для всех запросов */
+  url?: string | null;
+  requestMode?: "suggest" | "findById";
+  headers?: Record<string, string> | null;
+  /** Дополнительные параметры тела запроса */
+  params?: Record<string, unknown> | ((this: HTMLInputElement, query: string) => Record<string, unknown>);
+  /** Имя параметра запроса с введённым текстом */
+  paramName?: string;
+  count?: number;
+  language?: string | null;
+  timeout?: number;
+  /** Задержка перед запросом после ввода, мс */
+  deferRequestBy?: number;
+  minChars?: number;
   noCache?: boolean;
-  hint?: boolean | string;
-  addon?: string;
-  onSelect?: (suggestion: Suggestion<SuggestionMap[T]>) => void | Promise<void>;
-  formatResult?: (value: string, currentValue: string, suggestion: Suggestion<SuggestionMap[T]>) => string;
-  onSelectNothing?: (query: string) => void;
-  onSearchStart?: (params: Record<string, any>) => void | boolean;
-  onSearchComplete?: (query: string, suggestions: Suggestion<SuggestionMap[T]>[]) => void;
+  /** Не отправлять запросы, которые начинаются с запроса без результатов */
+  preventBadQueries?: boolean;
+  /** Дозапрашивать полные данные выбранной подсказки */
+  enrichmentEnabled?: boolean;
+  /** `true` — определить местоположение по IP; объект или массив — передать как есть */
+  geoLocation?: boolean | GeoLocation | GeoLocation[];
+  /** Диапазон частей адреса, например `city-street` */
+  bounds?: string;
+  /** Ограничения поиска или родительское поле (элемент или CSS-селектор) */
+  constraints?: string | HTMLElement | ConstraintOptions | ConstraintOptions[] | null;
+  /** Убирать из значения подсказки части, заданные ограничением */
+  restrict_value?: boolean;
+  /** Подсказка над списком; `false` — не показывать */
+  hint?: string | false;
+  /** Текст, когда ничего не найдено; `false` — скрыть список */
+  noSuggestionsHint?: string | false | null;
+  autoSelectFirst?: boolean;
+  /** Ширина экрана, до которой включается мобильный режим */
+  mobileWidth?: number;
+  /** Рендерить список в `body`, а не рядом с полем */
+  floating?: boolean;
+  /** Не уводить фокус по Tab, пока открыт список */
+  tabDisabled?: boolean;
+  triggerSelectOnBlur?: boolean;
+  triggerSelectOnEnter?: boolean;
+  triggerSelectOnSpace?: boolean;
+  formatResult?:
+    | ((
+        this: Suggestions<T>,
+        value: string,
+        currentValue: string,
+        suggestion: Suggestion<SuggestionData<T>>,
+        options: { unformattableTokens?: string[] },
+      ) => string)
+    | null;
+  formatSelected?: ((this: Suggestions<T>, suggestion: Suggestion<SuggestionData<T>>) => string | null) | null;
+  beforeRender?: (this: HTMLInputElement, container: HTMLElement) => void;
+  onSearchStart?: (this: HTMLInputElement, params: Record<string, unknown>) => void | boolean;
+  onSearchComplete?: (this: HTMLInputElement, query: string, suggestions: Suggestion<SuggestionData<T>>[] | undefined) => void;
+  onSearchError?: (this: HTMLInputElement, query: string | null, error: unknown) => void;
+  onSuggestionsFetch?:
+    | ((this: HTMLInputElement, suggestions: Suggestion<SuggestionData<T>>[]) => Suggestion<SuggestionData<T>>[] | void)
+    | null;
+  onSelect?: ((this: HTMLInputElement, suggestion: Suggestion<SuggestionData<T>>, changed: boolean) => void) | null;
+  onSelectNothing?: ((this: HTMLInputElement, query: string) => void) | null;
+  onInvalidateSelection?: ((this: HTMLInputElement, suggestion: Suggestion<SuggestionData<T>>) => void) | null;
 };
