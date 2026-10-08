@@ -8,7 +8,7 @@ import { EMAIL_TYPE } from "./types/email";
 import { BANK_TYPE } from "./types/bank";
 import { FMS_TYPE } from "./types/fms";
 import { Outward } from "./types/outward";
-import type { GeoLocation, Options, Suggestion, SuggestionMap, SuggestionsType } from "./types";
+import type { ConstraintOptions, GeoLocation, Options, Suggestion, SuggestionMap, SuggestionsType } from "./types";
 
 const types = {
   NAME: NAME_TYPE,
@@ -58,6 +58,17 @@ export const DEFAULT_OPTIONS = {
 } satisfies Partial<Options>;
 
 type ResolvedOptions<T extends string> = Options<T> & Required<Pick<Options<T>, keyof typeof DEFAULT_OPTIONS>>;
+
+type Bounds = {
+  from: string | undefined;
+  to: string | undefined;
+  /** Все части адреса диапазона, включая части родительских полей */
+  all: string[];
+  /** Части адреса, которые показывает это поле */
+  own: string[];
+};
+
+type SuggestionsElement = HTMLElement & { [DATA_ATTR_KEY]?: Suggestions<any> };
 
 const serviceMethods = {
   suggest: { httpMethod: "POST", addTypeInUrl: true },
@@ -110,21 +121,12 @@ const fetchJson = (url: string, init: RequestInit, timeout: number) => {
  * @param suggestion
  * @param instance other Suggestions instance
  */
-const belongsToArea = (suggestion: any, instance: any) => {
-  const parentSuggestion = instance.selection;
-  let result = parentSuggestion && parentSuggestion.data && instance.bounds && instance.bounds.all && instance.bounds.all.length > 0;
+const belongsToArea = (suggestion: Suggestion<any>, instance: Suggestions<any>) => {
+  const parentData = instance.selection?.data;
 
-  if (result) {
-    for (const bound of instance.bounds.all) {
-      if (parentSuggestion.data[bound] === suggestion.data[bound]) {
-        result = true;
-      } else {
-        result = false;
-        break;
-      }
-    }
-  }
-  return result;
+  return (
+    !!parentData && instance.bounds.all.length > 0 && instance.bounds.all.every((bound) => parentData[bound] === suggestion.data[bound])
+  );
 };
 
 const requestModes = {
@@ -143,7 +145,7 @@ const requestModes = {
 };
 
 let statusRequests = {} as Record<string, any>;
-let locationRequest;
+let locationRequest: ReturnType<typeof fetchJson> | null = null;
 let detectedLocation: { kladr_id: string } | null = null;
 
 const fiasParamNames = [
@@ -188,8 +190,8 @@ const getSignificantKladrId = (kladrId: string) => {
  * Пересечение массивов: ([1,2,3,4], [2,4,5,6]) => [2,4]
  * Исходные массивы не меняются.
  */
-const intersect = (array1: any[], array2: any[]) => {
-  const result = [] as any[];
+const intersect = (array1: string[], array2: string[]) => {
+  const result: string[] = [];
   if (!Array.isArray(array1) || !Array.isArray(array2)) {
     return result;
   }
@@ -202,13 +204,13 @@ const intersect = (array1: any[], array2: any[]) => {
  * @constructor
  */
 class ConstraintLocation {
-  instance: any;
-  fields: any;
+  instance: Suggestions<any>;
+  fields: GeoLocation;
   specificity: number;
   significantKladr?: string;
 
-  constructor(data, instance) {
-    const fiasFields = {};
+  constructor(data: unknown, instance: Suggestions<any>) {
+    const fiasFields: GeoLocation = {};
     this.instance = instance;
     this.fields = {};
     this.specificity = -1;
@@ -217,7 +219,7 @@ class ConstraintLocation {
       for (const [i, component] of instance.type.dataComponents.entries()) {
         const fieldName = component.id;
         if (component.forLocations && data[fieldName]) {
-          this.fields[fieldName] = data[fieldName];
+          this.fields[fieldName] = data[fieldName] as string;
           this.specificity = i;
         }
       }
@@ -227,21 +229,23 @@ class ConstraintLocation {
     const fiasFieldNames = intersect(fieldNames, fiasParamNames);
     if (fiasFieldNames.length > 0) {
       for (const fieldName of fiasFieldNames) {
-        fiasFields[fieldName] = this.fields[fieldName];
+        fiasFields[fieldName] = this.fields[fieldName]!;
       }
       this.fields = fiasFields;
       this.specificity = this.getFiasSpecificity(fiasFieldNames);
     } else if (this.fields.kladr_id) {
       this.fields = { kladr_id: this.fields.kladr_id };
-      this.significantKladr = getSignificantKladrId(this.fields.kladr_id);
+      this.significantKladr = getSignificantKladrId(String(this.fields.kladr_id));
       this.specificity = this.getKladrSpecificity(this.significantKladr);
     }
   }
 
   getLabel() {
-    return this.instance.type.composeValue(this.fields, {
-      saveCityDistrict: true,
-    });
+    return (
+      this.instance.type.composeValue?.(this.fields, {
+        saveCityDistrict: true,
+      }) ?? ""
+    );
   }
 
   getFields() {
@@ -258,11 +262,11 @@ class ConstraintLocation {
    * @param kladrId
    * @returns {number}
    */
-  getKladrSpecificity(kladrId) {
+  getKladrSpecificity(kladrId: string) {
     let specificity = -1;
     const kladrLength = kladrId.length;
-    for (const [i, component] of this.instance.type.dataComponents.entries()) {
-      if (component.kladrFormat && kladrLength === component.kladrFormat.digits) {
+    for (const [i, component] of (this.instance.type.dataComponents ?? []).entries()) {
+      if ("kladrFormat" in component && kladrLength === component.kladrFormat.digits) {
         specificity = i;
       }
     }
@@ -282,23 +286,23 @@ class ConstraintLocation {
    * @param fiasFieldNames
    * @returns {number}
    */
-  getFiasSpecificity(fiasFieldNames) {
+  getFiasSpecificity(fiasFieldNames: string[]) {
     let specificity = -1;
-    for (const [i, component] of this.instance.type.dataComponents.entries()) {
-      if (component.fiasType && fiasFieldNames.includes(component.fiasType) && specificity < i) {
+    for (const [i, component] of (this.instance.type.dataComponents ?? []).entries()) {
+      if ("fiasType" in component && fiasFieldNames.includes(component.fiasType) && specificity < i) {
         specificity = i;
       }
     }
     return specificity;
   }
 
-  containsData(data) {
+  containsData(data: Record<string, any>) {
     let result = true;
     if (this.fields.kladr_id) {
       return !!data.kladr_id && data.kladr_id.startsWith(this.significantKladr);
     } else {
       for (const [fieldName, value] of Object.entries(this.fields)) {
-        result = !!data[fieldName] && data[fieldName].toLowerCase() === (value as string).toLowerCase();
+        result = !!data[fieldName] && data[fieldName].toLowerCase() === String(value).toLowerCase();
         if (!result) break;
       }
       return result;
@@ -317,11 +321,11 @@ class ConstraintLocation {
 class Constraint {
   id: string;
   deletable: boolean;
-  instance: any;
-  locations: any[];
-  label: string;
+  instance: Suggestions<any>;
+  locations: ConstraintLocation[];
+  label: string | undefined;
 
-  constructor(data, instance) {
+  constructor(data: ConstraintOptions, instance: Suggestions<any>) {
     this.id = generateId("c");
     this.deletable = !!data.deletable;
     this.instance = instance;
@@ -345,6 +349,8 @@ class Constraint {
 }
 
 class Suggestions<T extends string = keyof SuggestionMap> {
+  static ConstraintLocation = ConstraintLocation;
+
   public element: HTMLInputElement;
   public suggestions: Suggestion<any>[];
   public badQueries: string[];
@@ -365,8 +371,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   public status: Record<string, unknown>;
   public currentRequest: ReturnType<typeof fetchJson> | null;
   public geoLocation: GeoLocation | GeoLocation[] | null;
-  public bounds: any;
-  public constraints: any;
+  public bounds!: Bounds;
+  public constraints!: Record<string, Constraint> | HTMLElement;
   public container: HTMLElement | null;
   public cancelFocus: boolean;
   public visible: boolean;
@@ -408,7 +414,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     this.element.classList.add("suggestions-input");
     this.element.style.boxSizing = "border-box";
 
-    (this.element as any)[DATA_ATTR_KEY] = this;
+    (this.element as SuggestionsElement)[DATA_ATTR_KEY] = this;
     this.createWrapper();
     this.bindElementEvents();
     this.createContainer();
@@ -422,7 +428,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     this.unbindElementEvents();
     this.removeContainer();
     this.unbindFromParent();
-    delete (this.element as any)[DATA_ATTR_KEY];
+    delete (this.element as SuggestionsElement)[DATA_ATTR_KEY];
     this.element.classList.remove("suggestions-input");
     this.removeWrapper();
     trigger(this.element, "suggestions-dispose");
@@ -1004,30 +1010,32 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return params;
   }
 
-  setupBounds(this: Suggestions) {
+  setupBounds() {
     this.bounds = {
-      from: null,
-      to: null,
+      from: undefined,
+      to: undefined,
+      all: [],
+      own: [],
     };
   }
 
-  setBoundsOptions(this: Suggestions) {
+  setBoundsOptions() {
     const newBounds = (this.options.bounds || "").trim().split("-");
-    let boundFrom = newBounds[0];
-    let boundTo = newBounds.at(-1);
-    const boundsOwn = [];
+    let boundFrom: string | undefined = newBounds[0];
+    let boundTo: string | undefined = newBounds.at(-1);
+    const boundsOwn: string[] = [];
     let boundIsOwn;
-    const boundsAll = [];
+    const boundsAll: string[] = [];
 
-    const boundsAvailable = this.type.dataComponents
+    const boundsAvailable: string[] = this.type.dataComponents
       ? this.type.dataComponents.filter((item) => item.forBounds).map((item) => item.id)
       : [];
 
-    if (!boundsAvailable.includes(boundFrom)) {
+    if (!boundFrom || !boundsAvailable.includes(boundFrom)) {
       boundFrom = undefined;
     }
 
-    if (!boundsAvailable.includes(boundTo)) {
+    if (!boundTo || !boundsAvailable.includes(boundTo)) {
       boundTo = undefined;
     }
 
@@ -1047,8 +1055,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     this.bounds.own = boundsOwn;
   }
 
-  constructBoundsParams(this: Suggestions) {
-    const params = {};
+  constructBoundsParams() {
+    const params: { from_bound?: { value: string }; to_bound?: { value: string } } = {};
 
     if (this.bounds.from) {
       params.from_bound = { value: this.bounds.from };
@@ -1065,7 +1073,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
    * Ничего не возвращает, меняет в самом suggestion
    * @param suggestion
    */
-  checkValueBounds(this: Suggestions, suggestion: Suggestion<any>) {
+  checkValueBounds(suggestion: Suggestion<any>) {
     let valueData;
 
     // If any bounds set up
@@ -1082,8 +1090,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
   }
 
-  copyDataComponents(this: Suggestions, data, components) {
-    const result = {};
+  copyDataComponents(data: Record<string, unknown>, components: string[]) {
+    const result: Record<string, unknown> = {};
     const dataComponentsById = this.type.dataComponentsById;
 
     if (dataComponentsById) {
@@ -1099,17 +1107,15 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return result;
   }
 
-  getBoundedKladrId(this: Suggestions, kladrId, boundsRange) {
+  getBoundedKladrId(kladrId: string, boundsRange: string[]) {
     const boundTo = boundsRange.at(-1);
-    let kladrFormat;
+    const component = this.type.dataComponents?.find((item) => item.id === boundTo);
+    const kladrFormat: { digits: number; zeros?: number } | undefined =
+      component && "kladrFormat" in component ? component.kladrFormat : undefined;
 
-    for (const component of this.type!.dataComponents!) {
-      if (component.id === boundTo) {
-        kladrFormat = component.kladrFormat;
-        break;
-      }
+    if (!kladrFormat) {
+      return kladrId;
     }
-
     return kladrId.slice(0, Math.max(0, kladrFormat.digits)) + "0".repeat(kladrFormat.zeros || 0);
   }
 
@@ -1768,9 +1774,9 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     if (typeof constraints === "string" || constraints instanceof HTMLElement) {
       // Constraint is an element or selector - find parent suggestions instance
       const parentEl =
-        typeof constraints === "string" ? (document.querySelector(constraints) as HTMLInputElement) : (constraints as HTMLInputElement);
+        typeof constraints === "string" ? document.querySelector<SuggestionsElement>(constraints) : (constraints as SuggestionsElement);
       if (parentEl && parentEl !== this.element) {
-        const parentInstance = (parentEl as any)[DATA_ATTR_KEY] as Suggestions | undefined;
+        const parentInstance = parentEl[DATA_ATTR_KEY];
         if (parentInstance) {
           this.unbindFromParent();
           this.constraints = parentEl;
@@ -1787,24 +1793,24 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
   }
 
-  addConstraint(constraint) {
-    constraint = new Constraint(constraint, this);
+  addConstraint(data: ConstraintOptions) {
+    const constraint = new Constraint(data, this);
 
-    if (constraint.isValid()) {
+    if (constraint.isValid() && !(this.constraints instanceof HTMLElement)) {
       this.constraints[constraint.id] = constraint;
     }
   }
 
   constructConstraintsParams() {
-    const locations = [];
+    const locations: GeoLocation[] = [];
     let constraints = this.constraints;
-    let parentInstance;
+    let parentInstance: Suggestions<any> | undefined;
     let parentData;
-    const params = {};
+    const params: { locations?: GeoLocation[]; restrict_value?: boolean } = {};
 
     // Walk up the parent chain to get constraint data
     while (constraints instanceof HTMLElement) {
-      parentInstance = (constraints as any)[DATA_ATTR_KEY] as Suggestions | undefined;
+      parentInstance = (constraints as SuggestionsElement)[DATA_ATTR_KEY];
       if (!parentInstance) break;
       parentData = parentInstance?.selection?.data;
       if (parentData) break;
@@ -1823,8 +1829,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
         params.locations = [parentData];
         params.restrict_value = true;
       }
-    } else if (constraints && isPlainObject(constraints)) {
-      for (const constraint of Object.values(constraints) as Constraint[]) {
+    } else {
+      for (const constraint of Object.values(constraints)) {
         locations.push(...constraint.getFields());
       }
 
@@ -1842,14 +1848,15 @@ class Suggestions<T extends string = keyof SuggestionMap> {
    * @returns {String}
    */
   getFirstConstraintLabel() {
-    const constraintsId = isPlainObject(this.constraints) && Object.keys(this.constraints)[0];
-
-    return constraintsId ? this.constraints[constraintsId].label : "";
+    if (this.constraints instanceof HTMLElement) {
+      return "";
+    }
+    return Object.values(this.constraints)[0]?.label ?? "";
   }
 
   bindToParent() {
-    const parentEl = this.constraints as HTMLElement;
-    if (!parentEl) return;
+    const parentEl = this.constraints;
+    if (!(parentEl instanceof HTMLElement)) return;
 
     this.parentAbortController = new AbortController();
     const { signal } = this.parentAbortController;
@@ -1883,7 +1890,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   getParentInstance() {
     if (this.constraints instanceof HTMLElement) {
-      return ((this.constraints as any)[DATA_ATTR_KEY] as Suggestions) || null;
+      return (this.constraints as SuggestionsElement)[DATA_ATTR_KEY] || null;
     }
     return null;
   }
@@ -1900,16 +1907,16 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   }
 
   /**
-   * Pick only fields this absent in restriction
+   * Pick only fields that are absent in restriction
    */
-  getUnrestrictedData(data) {
-    const restrictedKeys = [];
-    let unrestrictedData = {};
+  getUnrestrictedData(data: Record<string, unknown>) {
+    const restrictedKeys: string[] = [];
+    let unrestrictedData: Record<string, unknown> = {};
     let maxSpecificity = -1;
 
     // Find most specific location that could restrict current data
-    if (isPlainObject(this.constraints)) {
-      for (const constraint of Object.values(this.constraints) as Constraint[]) {
+    if (!(this.constraints instanceof HTMLElement)) {
+      for (const constraint of Object.values(this.constraints)) {
         for (const location of constraint.locations) {
           if (location.containsData(data) && location.specificity > maxSpecificity) {
             maxSpecificity = location.specificity;
@@ -1921,11 +1928,11 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     if (maxSpecificity >= 0) {
       // Для городов-регионов нужно также отсечь и город
       if (data.region_kladr_id && data.region_kladr_id === data.city_kladr_id) {
-        restrictedKeys.push(...this.type.dataComponentsById.city.fields);
+        restrictedKeys.push(...(this.type.dataComponentsById?.city?.fields ?? []));
       }
 
       // Collect all fieldnames from all restricted components
-      for (const component of this.type.dataComponents.slice(0, maxSpecificity + 1)) {
+      for (const component of (this.type.dataComponents ?? []).slice(0, maxSpecificity + 1)) {
         restrictedKeys.push(...component.fields);
       }
 
@@ -1957,7 +1964,5 @@ Suggestions.resetTokens = () => {
   }
   statusRequests = {};
 };
-
-Suggestions.ConstraintLocation = ConstraintLocation;
 
 export { Suggestions };
