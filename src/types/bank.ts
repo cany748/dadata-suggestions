@@ -7,7 +7,7 @@ import { ADDRESS_COMPONENTS, ADDRESS_STOPWORDS } from "./address";
 const BANK_TYPE = {
   urlSuffix: "bank",
   noSuggestionsHint: "Неизвестный банк",
-  matchers: [matchers.matchByFields([(d) => d?.value, (d) => d?.data?.bic, (d) => d?.data?.swift])],
+  matchers: [matchers.matchByFields<SuggestionBank>([(d) => d.value, (d) => d.data?.bic, (d) => d.data?.swift])],
   dataComponents: ADDRESS_COMPONENTS,
   enrichmentEnabled: true,
   enrichmentMethod: "findById",
@@ -44,6 +44,6 @@ const BANK_TYPE = {
   formatSelected(suggestion) {
     return suggestion?.data?.name?.payment || null;
   },
-} as SuggestionsType<SuggestionBank>;
+} satisfies SuggestionsType<SuggestionBank>;
 
 export { BANK_TYPE };

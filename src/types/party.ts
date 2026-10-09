@@ -1,7 +1,8 @@
 import { WORD_DELIMITERS } from "../constants";
 import { highlightMatches } from "../utils";
 import { matchers } from "../matchers";
-import type { Suggestion, SuggestionParty, SuggestionsType } from "../types";
+import type { FormatResultOptions, Suggestion, SuggestionParty, SuggestionsType } from "../types";
+import type { Suggestions } from "../suggestions";
 import { ADDRESS_COMPONENTS, ADDRESS_STOPWORDS } from "./address";
 
 const innPartsLengths = {
@@ -14,53 +15,53 @@ const chooseFormattedField = (formattedMain: string, formattedAlt: string) => {
   return rHasMatch.test(formattedAlt) && !rHasMatch.test(formattedMain) ? formattedAlt : formattedMain;
 };
 
-const formattedField = (main: string, alt: string, currentValue: string, suggestion: any, options: any) => {
+const formattedField = (main: string, alt: string | null, currentValue: string, options: FormatResultOptions) => {
   const formattedMain = highlightMatches(main, currentValue, options);
   const formattedAlt = highlightMatches(alt, currentValue, options);
 
   return chooseFormattedField(formattedMain, formattedAlt);
 };
 
-const formatResultInn = (ctx: any, suggestion: Suggestion<SuggestionParty>, currentValue: string) => {
+const formatResultInn = (ctx: Suggestions<any>, suggestion: Suggestion<SuggestionParty>, currentValue: string) => {
   const inn = suggestion.data && suggestion.data.inn;
   const innPartsLength =
     suggestion.data && suggestion.data.type ? innPartsLengths[suggestion.data.type as keyof typeof innPartsLengths] : undefined;
-  let innParts;
-  let formattedInn: any;
   const rDigit = /\d/;
 
   if (inn) {
-    formattedInn = highlightMatches(inn, currentValue);
-    if (innPartsLength) {
-      formattedInn = [...formattedInn];
-      innParts = innPartsLength.map((partLength: number) => {
-        let formattedPart = "";
-        let ch;
-
-        // eslint-disable-next-line no-cond-assign
-        while (partLength && (ch = formattedInn.shift())) {
-          formattedPart += ch;
-          if (rDigit.test(ch)) partLength--;
-        }
-
-        return formattedPart;
-      });
-      formattedInn = innParts.join(`<span class="${ctx.classes.subtext_delimiter}"></span>`) + formattedInn.join("");
+    const formattedInn = highlightMatches(inn, currentValue);
+    if (!innPartsLength) {
+      return formattedInn;
     }
 
-    return formattedInn;
+    const chars = [...formattedInn];
+    const innParts = innPartsLength.map((partLength: number) => {
+      let formattedPart = "";
+      let ch;
+
+      // eslint-disable-next-line no-cond-assign
+      while (partLength && (ch = chars.shift())) {
+        formattedPart += ch;
+        if (rDigit.test(ch)) partLength--;
+      }
+
+      return formattedPart;
+    });
+    return innParts.join(`<span class="${ctx.classes.subtext_delimiter}"></span>`) + chars.join("");
   }
+
+  return "";
 };
 
 export const PARTY_TYPE = {
   urlSuffix: "party",
   noSuggestionsHint: "Неизвестная организация",
   matchers: [
-    matchers.matchByFields<Suggestion<SuggestionParty>>([
-      (d) => d?.value,
-      [(d) => d?.data?.address?.value, ADDRESS_STOPWORDS],
-      (d) => d?.data?.inn,
-      (d) => d?.data?.ogrn,
+    matchers.matchByFields<SuggestionParty>([
+      (d) => d.value,
+      [(d) => d.data?.address?.value, ADDRESS_STOPWORDS],
+      (d) => d.data?.inn,
+      (d) => d.data?.ogrn,
     ]),
   ],
   dataComponents: ADDRESS_COMPONENTS,
@@ -70,11 +71,11 @@ export const PARTY_TYPE = {
     count: 1,
     locations_boost: null,
   },
-  getEnrichmentQuery(suggestion: Suggestion<SuggestionParty>) {
+  getEnrichmentQuery(suggestion) {
     return suggestion.data.hid;
   },
   geoEnabled: true,
-  formatResult(this: any, value: string, currentValue: string, suggestion: Suggestion<SuggestionParty>, options: any = {}) {
+  formatResult(value, currentValue, suggestion, options) {
     const formattedInn = formatResultInn(this, suggestion, currentValue);
     const formatterOGRN = highlightMatches(suggestion.data?.ogrn, currentValue);
     const formattedInnOGRN = chooseFormattedField(formattedInn, formatterOGRN);
@@ -87,7 +88,7 @@ export const PARTY_TYPE = {
       options.maxLength = 50;
     }
 
-    value = formattedField(value, suggestion.data?.name?.latin, currentValue, suggestion, options);
+    value = formattedField(value, suggestion.data?.name?.latin, currentValue, options);
     value = this.wrapFormattedValue(value, suggestion);
 
     if (address) {
@@ -108,4 +109,4 @@ export const PARTY_TYPE = {
     }
     return value;
   },
-} as SuggestionsType<SuggestionParty>;
+} satisfies SuggestionsType<SuggestionParty>;

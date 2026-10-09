@@ -1093,13 +1093,13 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
   }
 
-  copyDataComponents(data: Record<string, unknown>, components: string[]) {
+  copyDataComponents<D extends Record<string, unknown>>(data: D, components: string[]) {
     const result: Record<string, unknown> = {};
     const dataComponentsById = this.type.dataComponentsById;
 
     if (dataComponentsById) {
       for (const component of components) {
-        for (const field of dataComponentsById[component].fields) {
+        for (const field of dataComponentsById[component]?.fields ?? []) {
           if (data[field] != null) {
             result[field] = data[field];
           }
@@ -1107,7 +1107,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       }
     }
 
-    return result;
+    return result as Partial<D>;
   }
 
   getBoundedKladrId(kladrId: string, boundsRange: string[]) {
@@ -1898,7 +1898,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   /**
    * Pick only fields that are absent in restriction
    */
-  getUnrestrictedData(data: Record<string, unknown>) {
+  getUnrestrictedData<D extends Record<string, unknown>>(data: D) {
     const restrictedKeys: string[] = [];
     let unrestrictedData: Record<string, unknown> = {};
     let maxSpecificity = -1;
@@ -1935,7 +1935,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       unrestrictedData = data;
     }
 
-    return unrestrictedData;
+    return unrestrictedData as Partial<D>;
   }
 }
 

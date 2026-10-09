@@ -709,44 +709,56 @@ export type SuggestionMap = {
 
 export type SuggestionAny = SuggestionMap[keyof SuggestionMap];
 
-/**
- * Type is a bundle of properties:
- * and methods:
- * - `composeValue` returns string value based on suggestion.data
- * - `formatSelected` returns string to be inserted in textbox
- */
+export type Matcher<T> = (query: string, suggestions: Suggestion<T>[]) => number;
 
+export type ComposeValueOptions = {
+  /** Оставить район города, даже если он взят из ОКАТО */
+  saveCityDistrict?: boolean;
+  excludeCityDistrict?: boolean;
+};
+
+export type FormatResultOptions = { unformattableTokens?: string[]; maxLength?: number };
+
+/**
+ * Поведение подсказок конкретного типа (`NAME`, `ADDRESS` и т.д.).
+ * Методы с `this: Suggestions` вызываются в контексте экземпляра.
+ */
 export type SuggestionsType<T> = {
   urlSuffix: string;
-  /** Массив функций (с дополнительными данными, привязанными к контексту), которые находят подходящие подсказки для выбора. */
-  matchers: any[];
+  /** Находят индекс подсказки, которую можно выбрать по введённому тексту, или -1 */
+  matchers: Matcher<T>[];
   noSuggestionsHint?: string | false;
-  /** Сопоставление полей `suggestion.data` с их отображаемыми именами. */
-  fieldNames?: any;
-  /** Массив строк, которые не следует выделять */
+  /** Подписи полей `suggestion.data` для одинаковых подсказок */
+  fieldNames?: Record<string, string>;
+  /** Слова, которые не подсвечиваются */
   unformattableTokens?: string[];
-  /** Массив 'bound's можно установить как опцию `bounds`. Порядок важен. */
+  /** Части адреса в порядке от крупной к мелкой; используются для `bounds` и `constraints` */
   dataComponents?: readonly DataComponents[];
-  dataComponentsById?: Record<string, any>;
-  /** Определяет местоположения клиента, чтобы передать его всем запросам */
+  dataComponentsById?: Record<string, DataComponents>;
+  /** Определять местоположение клиента и передавать его в запросы */
   geoEnabled?: boolean;
-  /** Делает отправку дополнительного запроса при выборе подсказки */
+  /** Дозапрашивать полные данные при выборе подсказки */
   enrichmentEnabled?: boolean;
   enrichmentMethod?: "suggest" | "findById";
-  enrichmentParams?: any;
+  enrichmentParams?: Record<string, unknown>;
   getEnrichmentQuery?: (suggestion: Suggestion<T>) => string;
-  /** Возвращает html для подсказки. Переопределяет метод по умолчанию */
-  formatResult?: (value: string, currentValue: string, suggestion: Suggestion<T>, options: any) => string;
-  /** Возвращает значение для поля ввода. Переопределяет `suggestion.value` */
+  formatResult?: (
+    this: Suggestions<any>,
+    value: string,
+    currentValue: string,
+    suggestion: Suggestion<T>,
+    options: FormatResultOptions,
+  ) => string;
   formatSelected?: (suggestion: Suggestion<T>) => string | null;
-  /** Проверяет, можно ли использовать suggestion.data как полные данные своего типа. */
-  isDataComplete?: (suggestion: Suggestion<T>) => boolean;
-  /** Проверяет, подходит ли запрос для сервера */
-  isQueryRequestable?: (query: string) => boolean;
-  /** Компонует значение на основе данных */
-  composeValue?: (data: any, options?: any) => string;
-  /** Получение значения для выбора */
-  getSuggestionValue?: (instance: any, options: any) => string | null;
+  /** Можно ли считать `suggestion.data` полными данными своего типа */
+  isDataComplete?: (this: Suggestions<any>, suggestion: Suggestion<T>) => boolean;
+  isQueryRequestable?: (this: Suggestions<any>, query: string) => boolean;
+  composeValue?: (data: Partial<T>, options?: ComposeValueOptions) => string;
+  /** Значение для поля ввода; `null` — использовать значение по умолчанию */
+  getSuggestionValue?: (
+    instance: Suggestions<any>,
+    options: { suggestion: Suggestion<T>; hasSameValues?: boolean; hasBeenEnriched?: boolean },
+  ) => string | null;
 };
 
 /** Данные подсказки: для известных типов — из `SuggestionMap`, для остальных неизвестны */

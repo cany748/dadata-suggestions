@@ -1,10 +1,10 @@
-import type { SuggestionName, SuggestionsType } from "../types";
+import type { Suggestion, SuggestionName, SuggestionsType } from "../types";
 
 import { WORD_DELIMITERS } from "../constants";
 import { escapeRegExChars, fieldsAreNotEmpty } from "../utils";
 import { matchers } from "../matchers";
 
-const valueStartsWith = (suggestion, field) => {
+const valueStartsWith = (suggestion: Suggestion<SuggestionName>, field: keyof SuggestionName) => {
   const fieldValue = suggestion.data && suggestion.data[field];
 
   return fieldValue && new RegExp(`^${escapeRegExChars(fieldValue)}([${WORD_DELIMITERS}]|$)`, "i").test(suggestion.value);
@@ -21,15 +21,13 @@ const NAME_TYPE = {
     patronymic: "отчество",
   },
   isDataComplete(suggestion) {
-    let params = this.options.params;
+    const params = this.options.params;
+    const parts = (typeof params === "function" ? params.call(this.element, suggestion.value) : params).parts;
     const data = suggestion.data;
-    let fields;
+    let fields: string[];
 
-    if (typeof params === "function") {
-      params = params.call(this.element, suggestion.value);
-    }
-    if (params && params.parts) {
-      fields = params.parts.map((part) => {
+    if (Array.isArray(parts)) {
+      fields = parts.map((part: string) => {
         return part.toLowerCase();
       });
     } else {
@@ -45,6 +43,6 @@ const NAME_TYPE = {
   composeValue(data) {
     return [data.surname, data.name, data.patronymic].filter((e) => !!e).join(" ");
   },
-} as SuggestionsType<SuggestionName>;
+} satisfies SuggestionsType<SuggestionName>;
 
 export { NAME_TYPE };

@@ -1,6 +1,6 @@
 import { fieldsAreNotEmpty, highlightMatches, isPlainObject, tokenize } from "../utils";
 import { matchers } from "../matchers";
-import type { SuggestionAddress, SuggestionsType } from "../types";
+import type { ComposeValueOptions, Suggestion, SuggestionAddress, SuggestionsType } from "../types";
 import type { Suggestions } from "../suggestions";
 
 export const ADDRESS_STOPWORDS = [
@@ -374,6 +374,98 @@ const componentsUnderCityDistrict = ADDRESS_COMPONENTS.slice(
   ADDRESS_COMPONENTS.findIndex((component) => component.id === "city_district") + 1,
 ).map((component) => component.id);
 
+/**
+ * Возвращает список слов в запросе,
+ * которые не встречаются в подсказке
+ */
+const findUnusedTokens = (tokens: string[], value: string) => {
+  return tokens.filter((token) => {
+    return !value.includes(token);
+  });
+};
+
+/**
+ * Возвращает исторические названия для слов запроса,
+ * для которых не найдено совпадения в основном значении подсказки
+ */
+const getFormattedHistoryValues = (unusedTokens: string[], historyValues: string[]) => {
+  const values = [];
+  let formatted = "";
+
+  for (const historyValue of historyValues) {
+    for (const token of unusedTokens) {
+      if (historyValue.toLowerCase().includes(token)) {
+        values.push(historyValue);
+        break;
+      }
+    }
+  }
+
+  if (values.length > 0) {
+    formatted = ` (бывш. ${values.join(", ")})`;
+  }
+
+  return formatted;
+};
+
+const composeValue = (data: Partial<SuggestionAddress>, options?: ComposeValueOptions) => {
+  const country = data.country;
+  let region = data.region_with_type || [data.region, data.region_type].filter((e) => !!e).join(" ") || data.region_type_full;
+  const area = data.area_with_type || [data.area_type, data.area].filter((e) => !!e).join(" ") || data.area_type_full;
+  const city = data.city_with_type || [data.city_type, data.city].filter((e) => !!e).join(" ") || data.city_type_full;
+  const settelement =
+    data.settlement_with_type || [data.settlement_type, data.settlement].filter((e) => !!e).join(" ") || data.settlement_type_full;
+  let cityDistrict =
+    data.city_district_with_type ||
+    [data.city_district_type, data.city_district].filter((e) => !!e).join(" ") ||
+    data.city_district_type_full;
+  const street = data.street_with_type || [data.street_type, data.street].filter((e) => !!e).join(" ") || data.street_type_full;
+  const house = [data.stead_type, data.stead, data.house_type, data.house, data.block_type, data.block].filter((e) => !!e).join(" ");
+  const flat = [data.flat_type, data.flat].filter((e) => !!e).join(" ");
+  const postalBox = data.postal_box && `а/я ${data.postal_box}`;
+
+  // если регион совпадает с городом
+  // например г Москва, г Москва
+  // то не показываем регион
+  if (region === city) {
+    region = "";
+  }
+
+  // иногда не показываем район
+  if (!(options && options.saveCityDistrict)) {
+    if (options && options.excludeCityDistrict) {
+      // если район явно запрещен
+      cityDistrict = "";
+    } else if (cityDistrict && !data.city_district_fias_id) {
+      // если район взят из ОКАТО (у него пустой city_district_fias_id)
+      cityDistrict = "";
+    }
+  }
+
+  return [country, region, area, city, cityDistrict, settelement, street, house, flat, postalBox].filter((e) => !!e).join(", ");
+};
+
+/*
+ * Compose suggestion value with respect to constraints
+ */
+const getValueWithinConstraints = (
+  instance: Suggestions<any>,
+  suggestion: Suggestion<SuggestionAddress>,
+  options?: ComposeValueOptions,
+) => {
+  return composeValue(instance.getUnrestrictedData(suggestion.data), options);
+};
+
+/*
+ * Compose suggestion value with respect to bounds
+ */
+const getValueWithinBounds = (instance: Suggestions<any>, suggestion: Suggestion<SuggestionAddress>, options?: ComposeValueOptions) => {
+  // для корректного составления адреса нужен city_district_fias_id
+  const data = instance.copyDataComponents(suggestion.data, [...instance.bounds.own, "city_district_fias_id"]);
+
+  return composeValue(data, options);
+};
+
 export const ADDRESS_TYPE = {
   urlSuffix: "address",
   noSuggestionsHint: "Неизвестный адрес",
@@ -394,49 +486,14 @@ export const ADDRESS_TYPE = {
     return suggestion.unrestricted_value;
   },
   geoEnabled: true,
-  isDataComplete(this: Suggestions, suggestion) {
+  isDataComplete(suggestion) {
     const fields = [this.bounds.to || "flat"];
     const data = suggestion.data;
 
     return !isPlainObject(data) || fieldsAreNotEmpty(data, fields);
   },
-  composeValue(data, options) {
-    const country = data.country;
-    let region = data.region_with_type || [data.region, data.region_type].filter((e) => !!e).join(" ") || data.region_type_full;
-    const area = data.area_with_type || [data.area_type, data.area].filter((e) => !!e).join(" ") || data.area_type_full;
-    const city = data.city_with_type || [data.city_type, data.city].filter((e) => !!e).join(" ") || data.city_type_full;
-    const settelement =
-      data.settlement_with_type || [data.settlement_type, data.settlement].filter((e) => !!e).join(" ") || data.settlement_type_full;
-    let cityDistrict =
-      data.city_district_with_type ||
-      [data.city_district_type, data.city_district].filter((e) => !!e).join(" ") ||
-      data.city_district_type_full;
-    const street = data.street_with_type || [data.street_type, data.street].filter((e) => !!e).join(" ") || data.street_type_full;
-    const house = [data.stead_type, data.stead, data.house_type, data.house, data.block_type, data.block].filter((e) => !!e).join(" ");
-    const flat = [data.flat_type, data.flat].filter((e) => !!e).join(" ");
-    const postalBox = data.postal_box && `а/я ${data.postal_box}`;
-
-    // если регион совпадает с городом
-    // например г Москва, г Москва
-    // то не показываем регион
-    if (region === city) {
-      region = "";
-    }
-
-    // иногда не показываем район
-    if (!(options && options.saveCityDistrict)) {
-      if (options && options.excludeCityDistrict) {
-        // если район явно запрещен
-        cityDistrict = "";
-      } else if (cityDistrict && !data.city_district_fias_id) {
-        // если район взят из ОКАТО (у него пустой city_district_fias_id)
-        cityDistrict = "";
-      }
-    }
-
-    return [country, region, area, city, cityDistrict, settelement, street, house, flat, postalBox].filter((e) => !!e).join(", ");
-  },
-  formatResult(this: Suggestions, value, currentValue, suggestion, options) {
+  composeValue,
+  formatResult(value, currentValue, suggestion, options) {
     const district = suggestion.data && suggestion.data.city_district_with_type;
     const unformattableTokens = options && options.unformattableTokens;
     const historyValues = suggestion.data && suggestion.data.history_values;
@@ -447,8 +504,8 @@ export const ADDRESS_TYPE = {
     // добавляем исторические значения
     if (historyValues && historyValues.length > 0) {
       tokens = tokenize(currentValue, unformattableTokens);
-      unusedTokens = this.type.findUnusedTokens(tokens, value);
-      formattedHistoryValues = this.type.getFormattedHistoryValues(unusedTokens, historyValues);
+      unusedTokens = findUnusedTokens(tokens, value);
+      formattedHistoryValues = getFormattedHistoryValues(unusedTokens, historyValues);
       if (formattedHistoryValues) {
         value += formattedHistoryValues;
       }
@@ -468,51 +525,6 @@ export const ADDRESS_TYPE = {
     return value;
   },
 
-  /**
-   * Возвращает список слов в запросе,
-   * которые не встречаются в подсказке
-   */
-  findUnusedTokens(tokens, value) {
-    let unused = [];
-
-    unused = tokens.filter((token) => {
-      return !value.includes(token);
-    });
-
-    return unused;
-  },
-
-  /**
-   * Возвращает исторические названия для слов запроса,
-   * для которых не найдено совпадения в основном значении подсказки
-   */
-  getFormattedHistoryValues(unusedTokens, historyValues) {
-    const values = [];
-    let formatted = "";
-
-    for (const historyValue of historyValues) {
-      for (const token of unusedTokens) {
-        if (historyValue.toLowerCase().includes(token)) {
-          values.push(historyValue);
-          break;
-        }
-      }
-    }
-
-    if (values.length > 0) {
-      formatted = ` (бывш. ${values.join(", ")})`;
-    }
-
-    return formatted;
-  },
-
-  /**
-   * @param instance
-   * @param options
-   * @param options.suggestion
-   * @param options.hasSameValues
-   * @param options.hasBeenEnreached
-   */
   getSuggestionValue(instance, options) {
     let formattedValue = null;
 
@@ -520,34 +532,19 @@ export const ADDRESS_TYPE = {
       if (instance.options.restrict_value) {
         // Can not use unrestricted address,
         // because some components (from constraints) must be omitted
-        formattedValue = this.getValueWithinConstraints(instance, options.suggestion);
+        formattedValue = getValueWithinConstraints(instance, options.suggestion);
       } else if (instance.bounds.own.length > 0) {
         // Can not use unrestricted address,
         // because only components from bounds must be included
-        formattedValue = this.getValueWithinBounds(instance, options.suggestion);
+        formattedValue = getValueWithinBounds(instance, options.suggestion);
       } else {
         // Can use full unrestricted address
         formattedValue = options.suggestion.unrestricted_value;
       }
     } else if (options.hasBeenEnriched && instance.options.restrict_value) {
-      formattedValue = this.getValueWithinConstraints(instance, options.suggestion, { excludeCityDistrict: true });
+      formattedValue = getValueWithinConstraints(instance, options.suggestion, { excludeCityDistrict: true });
     }
 
     return formattedValue;
   },
-  /*
-   * Compose suggestion value with respect to constraints
-   */
-  getValueWithinConstraints(instance, suggestion, options) {
-    return this.composeValue(instance.getUnrestrictedData(suggestion.data), options);
-  },
-  /*
-   * Compose suggestion value with respect to bounds
-   */
-  getValueWithinBounds(instance, suggestion, options) {
-    // для корректного составления адреса нужен city_district_fias_id
-    const data = instance.copyDataComponents(suggestion.data, [...instance.bounds.own, "city_district_fias_id"]);
-
-    return this.composeValue(data, options);
-  },
-} as SuggestionsType<SuggestionAddress>;
+} satisfies SuggestionsType<SuggestionAddress>;

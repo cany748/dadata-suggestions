@@ -8,6 +8,6 @@ const EMAIL_TYPE = {
   isQueryRequestable(query) {
     return query.includes("@");
   },
-} as SuggestionsType<SuggestionEmail>;
+} satisfies SuggestionsType<SuggestionEmail>;
 
 export { EMAIL_TYPE };

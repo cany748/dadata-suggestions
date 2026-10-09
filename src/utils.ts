@@ -1,4 +1,5 @@
 import { CLASSES, WORD_DELIMITERS, WORD_PARTS_DELIMITERS } from "./constants";
+import type { FormatResultOptions } from "./types";
 
 export const trigger = (element: EventTarget, eventName: string, detail?: any[]): void => {
   const event = new CustomEvent(eventName, {
@@ -211,7 +212,7 @@ const escapeHtml = (str: string) => {
 /**
  * Makes HTML contents for suggestion item
  */
-export const highlightMatches = (value: string, currentValue: string, options?: { unformattableTokens?: string[]; maxLength?: number }) => {
+export const highlightMatches = (value: string | null | undefined, currentValue: string, options?: FormatResultOptions) => {
   type Chunk = any;
   const chunks: Chunk[] = [];
   const unformattableTokens = options && options.unformattableTokens;

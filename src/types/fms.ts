@@ -8,4 +8,4 @@ export const FMS_TYPE = {
   formatResult(value, currentValue, suggestion) {
     return `${suggestion.data.code} — ${suggestion.data.name}`;
   },
-} as SuggestionsType<SuggestionFms>;
+} satisfies SuggestionsType<SuggestionFms>;
