@@ -187,7 +187,7 @@ const fiasParamNames = [
  * 50 000 040 000 00 → 50 000 040
  */
 const getSignificantKladrId = (kladrId: string) => {
-  const significantKladrId = kladrId.replace(/^(\d{2})(\d*?)(0+)$/g, "$1$2");
+  const significantKladrId = kladrId.slice(0, 2) + kladrId.slice(2).replace(/0+$/, "");
   const length = significantKladrId.length;
   let significantLength = -1;
   if (length <= 2) {
