@@ -16,7 +16,7 @@ describe("Email", function () {
       serviceUrl,
       type: "EMAIL",
       // disable mobile view features
-      mobileWidth: Number.NaN,
+      mobileWidth: NaN,
     });
 
     helpers.returnGoodStatus(server);

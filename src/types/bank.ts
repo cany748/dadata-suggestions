@@ -28,7 +28,7 @@ const BANK_TYPE = {
     if (address) {
       address = address.replace(/^\d{6}( РОССИЯ)?, /i, "");
       address =
-        globalThis.innerWidth <= this.options.mobileWidth
+        innerWidth <= this.options.mobileWidth
           ? address.replace(new RegExp(`^([^${WORD_DELIMITERS}]+[${WORD_DELIMITERS}]+[^${WORD_DELIMITERS}]+).*`), "$1")
           : highlightMatches(address, currentValue, {
               unformattableTokens: ADDRESS_STOPWORDS,
@@ -36,8 +36,7 @@ const BANK_TYPE = {
     }
 
     if (formattedBIC || address) {
-      value +=
-        `<div class="${this.classes.subtext}">` + `<span class="${this.classes.subtext_inline}">${formattedBIC}</span>${address}</div>`;
+      value += `<div class="${this.classes.subtext}"><span class="${this.classes.subtext_inline}">${formattedBIC}</span>${address}</div>`;
     }
     return value;
   },

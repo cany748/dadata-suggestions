@@ -431,15 +431,9 @@ const composeValue = (data: Partial<SuggestionAddress>, options?: ComposeValueOp
     region = "";
   }
 
-  // иногда не показываем район
-  if (!(options && options.saveCityDistrict)) {
-    if (options && options.excludeCityDistrict) {
-      // если район явно запрещен
-      cityDistrict = "";
-    } else if (cityDistrict && !data.city_district_fias_id) {
-      // если район взят из ОКАТО (у него пустой city_district_fias_id)
-      cityDistrict = "";
-    }
+  // не показываем район, если он явно запрещен или взят из ОКАТО (у него пустой city_district_fias_id)
+  if (!options?.saveCityDistrict && (options?.excludeCityDistrict || (cityDistrict && !data.city_district_fias_id))) {
+    cityDistrict = "";
   }
 
   return [country, region, area, city, cityDistrict, settelement, street, house, flat, postalBox].filter((e) => !!e).join(", ");
@@ -497,15 +491,12 @@ export const ADDRESS_TYPE = {
     const district = suggestion.data && suggestion.data.city_district_with_type;
     const unformattableTokens = options && options.unformattableTokens;
     const historyValues = suggestion.data && suggestion.data.history_values;
-    let tokens;
-    let unusedTokens;
-    let formattedHistoryValues;
 
     // добавляем исторические значения
     if (historyValues && historyValues.length > 0) {
-      tokens = tokenize(currentValue, unformattableTokens);
-      unusedTokens = findUnusedTokens(tokens, value);
-      formattedHistoryValues = getFormattedHistoryValues(unusedTokens, historyValues);
+      const tokens = tokenize(currentValue, unformattableTokens);
+      const unusedTokens = findUnusedTokens(tokens, value);
+      const formattedHistoryValues = getFormattedHistoryValues(unusedTokens, historyValues);
       if (formattedHistoryValues) {
         value += formattedHistoryValues;
       }

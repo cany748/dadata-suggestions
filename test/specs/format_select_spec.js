@@ -14,7 +14,7 @@ describe("Text to insert after selection", function () {
       serviceUrl,
       type: "NAME",
       // disable mobile view features
-      mobileWidth: Number.NaN,
+      mobileWidth: NaN,
     });
 
     helpers.returnGoodStatus(server);
@@ -571,7 +571,7 @@ describe("Text to insert after selection", function () {
       type: "ADDRESS",
       geoLocation: false,
       bounds: "city-settlement",
-      mobileWidth: Number.NaN,
+      mobileWidth: NaN,
     });
 
     instance.setOptions({
@@ -656,7 +656,7 @@ describe("Text to insert after selection", function () {
       type: "ADDRESS",
       geoLocation: false,
       bounds: "city-settlement",
-      mobileWidth: Number.NaN,
+      mobileWidth: NaN,
     });
 
     instance.setOptions({

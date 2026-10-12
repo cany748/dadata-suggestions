@@ -40,13 +40,12 @@ const haveSameParent = sameParentChecker((val) => {
  * Возвращает индекс единственной подходящей подсказки
  * или -1, если подходящих нет или несколько.
  */
-const _matchByWords = (stopwords: string[], parentCheckerFn: (suggestions: Suggestion<unknown>[]) => boolean): Matcher<unknown> => {
+const _matchByWords = (stopwords: string[]): Matcher<unknown> => {
   return (query, suggestions) => {
-    let queryTokens: string[];
     const matches: number[] = [];
 
-    if (parentCheckerFn(suggestions)) {
-      queryTokens = splitTokens(split(query, stopwords));
+    if (haveSameParent(suggestions)) {
+      const queryTokens = splitTokens(split(query, stopwords));
 
       for (const [i, suggestion] of suggestions.entries()) {
         const suggestedValue = suggestion.value;
@@ -77,8 +76,8 @@ const minusWithPartialMatching = (array1: string[], array2: string[]) => {
     return array1;
   }
   return array1.filter((el) => {
-    return !array2.some((el2) => {
-      return el2.startsWith(el);
+    return array2.every((el2) => {
+      return !el2.startsWith(el);
     });
   });
 };
@@ -124,11 +123,11 @@ const matchers = {
   },
 
   matchByWords(stopwords?: string[]) {
-    return _matchByWords(stopwords || [], haveSameParent);
+    return _matchByWords(stopwords || []);
   },
 
   matchByWordsAddress(stopwords: string[]) {
-    return _matchByWords(stopwords, haveSameParent);
+    return _matchByWords(stopwords);
   },
 
   /**

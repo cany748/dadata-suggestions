@@ -17,7 +17,7 @@ describe("Base features", function () {
       serviceUrl,
       type: "NAME",
       // disable mobile view features
-      mobileWidth: Number.NaN,
+      mobileWidth: NaN,
     });
 
     helpers.returnGoodStatus(server);
@@ -635,8 +635,8 @@ describe("Request errors", () => {
   const serviceUrl = "/some/url";
 
   const suggestRequests = () => server.requests.filter((request) => request.url.includes("/suggest/"));
-  const search = (value) => {
-    input.value = value;
+  const search = () => {
+    input.value = "A";
     instance.onValueChange();
     return suggestRequests().at(-1);
   };
@@ -658,7 +658,7 @@ describe("Request errors", () => {
   });
 
   it("Should report network error to `onSearchError`", async () => {
-    const request = search("A");
+    const request = search();
 
     request.error();
 
@@ -670,7 +670,7 @@ describe("Request errors", () => {
     const onSearchComplete = vi.fn();
     instance.setOptions({ onSearchComplete });
 
-    search("A").respond(200, { "Content-type": "application/json" }, "null");
+    search().respond(200, { "Content-type": "application/json" }, "null");
 
     await expect.poll(() => onSearchComplete).toHaveBeenCalledWith("A", undefined);
     expect(instance.visible).toBe(false);
@@ -679,7 +679,7 @@ describe("Request errors", () => {
   it("Should abort request after `timeout` and report it to `onSearchError`", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     instance.setOptions({ timeout: 1234 });
-    const request = search("A");
+    const request = search();
 
     vi.advanceTimersByTime(1233);
     expect(request.aborted).toBe(false);
@@ -694,7 +694,7 @@ describe("Request errors", () => {
   it("Should send `X-Partner` header if `partner` option set", () => {
     instance.setOptions({ partner: " partner-id " });
 
-    expect(search("A").requestHeaders["X-Partner"]).toEqual("partner-id");
+    expect(search().requestHeaders["X-Partner"]).toEqual("partner-id");
   });
 });
 

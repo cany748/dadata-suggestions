@@ -38,7 +38,7 @@
     "format": "prettier --write src/"
   },
   "devDependencies": {
-    "@cany748/eslint-config": "^7.0.0",
+    "@cany748/eslint-config": "^7.0.2",
     "@types/node": "^26.6.5",
     "@typescript-eslint/eslint-plugin": "^8.71.1",
     "@typescript/native": "npm:typescript@^7.0.2",

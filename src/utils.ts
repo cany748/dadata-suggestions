@@ -65,18 +65,17 @@ export const objectsEqual = (a: Record<string, any>, b: Record<string, any>) => 
   if (a === b) return true;
 
   if (a && b && typeof a == "object" && typeof b == "object") {
-    let i;
     const keys = Object.keys(a);
     const length = keys.length;
 
     if (length !== Object.keys(b).length) return false;
 
-    for (i = length; i-- !== 0; ) {
+    for (let i = length; i-- !== 0;) {
       const key = keys[i];
       if (!key || !Object.hasOwn(b, key)) return false;
     }
 
-    for (i = length; i-- !== 0; ) {
+    for (let i = length; i-- !== 0;) {
       const key = keys[i];
       if (!key) continue;
 
@@ -200,30 +199,22 @@ const escapeHtmlMap = {
   "/": "&#x2F;",
 } as const;
 
-const escapeHtml = (str: string) => {
-  if (str) {
-    for (const [ch, html] of Object.entries(escapeHtmlMap)) {
-      str = str.replaceAll(ch, html);
-    }
-  }
-  return str;
-};
+const escapeHtml = (str: string) => str.replaceAll(/[&<>"'/]/g, (ch) => escapeHtmlMap[ch as keyof typeof escapeHtmlMap]);
 
 /**
  * Makes HTML contents for suggestion item
  */
 export const highlightMatches = (value: string | null | undefined, currentValue: string, options?: FormatResultOptions) => {
+  if (!value) return "";
+
   type Chunk = any;
   const chunks: Chunk[] = [];
   const unformattableTokens = options && options.unformattableTokens;
   let maxLength = options && options.maxLength;
   const rWords = new RegExp(`([^${WORD_DELIMITERS}]*)([${WORD_DELIMITERS}]*)`, "g");
   let match;
-  let word;
   let i: number;
   let chunk: Chunk;
-
-  if (!value) return "";
 
   const tokens = tokenize(currentValue, unformattableTokens);
 
@@ -239,7 +230,7 @@ export const highlightMatches = (value: string | null | undefined, currentValue:
   // parse string by words
   // eslint-disable-next-line no-cond-assign
   while ((match = rWords.exec(value)) && match[0]) {
-    word = match[1];
+    const word = match[1];
     chunks.push({
       text: word,
 
@@ -347,35 +338,41 @@ export const highlightMatches = (value: string | null | undefined, currentValue:
 };
 
 export const makeSuggestionLabel = (suggestions: any[], suggestion: any, fieldNames?: Record<string, string>) => {
+  const hasSameValues = suggestions.some((s) => s.value === suggestion.value && s !== suggestion);
+  if (!fieldNames || !suggestion.data || !hasSameValues) {
+    return;
+  }
+
   const nameData = {} as Record<string, string>;
+
+  for (const field of Object.keys(fieldNames)) {
+    const value = suggestion.data[field];
+    if (value) {
+      nameData[field] = formatToken(value);
+    }
+  }
+
+  if (Object.keys(nameData).length === 0) {
+    return;
+  }
+
   const rWords = new RegExp(`([^${WORD_DELIMITERS}]*)([${WORD_DELIMITERS}]*)`, "g");
   let match;
   let word: string | undefined;
   const labels = [] as string[];
 
-  if (fieldNames && suggestions.some((s) => s.value === suggestion.value && s !== suggestion) && suggestion.data) {
-    for (const field of Object.keys(fieldNames)) {
-      const value = suggestion.data[field];
-      if (value) {
-        nameData[field] = formatToken(value);
+  // eslint-disable-next-line no-cond-assign
+  while ((match = rWords.exec(formatToken(suggestion.value))) && (word = match[1])) {
+    for (const [i, value] of Object.entries(nameData)) {
+      if (value === word) {
+        labels.push(fieldNames[i]!);
+        delete nameData[i];
+        break;
       }
     }
+  }
 
-    if (Object.keys(nameData).length > 0) {
-      // eslint-disable-next-line no-cond-assign
-      while ((match = rWords.exec(formatToken(suggestion.value))) && (word = match[1])) {
-        for (const [i, value] of Object.entries(nameData)) {
-          if (value === word) {
-            labels.push(fieldNames[i]!);
-            delete nameData[i];
-            break;
-          }
-        }
-      }
-
-      if (labels.length > 0) {
-        return escapeHtml(labels.join(", "));
-      }
-    }
+  if (labels.length > 0) {
+    return escapeHtml(labels.join(", "));
   }
 };

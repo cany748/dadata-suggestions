@@ -14,7 +14,7 @@ describe("Highlight suggestions", function () {
       serviceUrl,
       type: "NAME",
       // disable mobile view
-      mobileWidth: Number.NaN,
+      mobileWidth: NaN,
     });
   });
 

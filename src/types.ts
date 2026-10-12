@@ -838,8 +838,7 @@ export type Options<T extends string = keyof SuggestionMap> = {
   onSearchComplete?: (this: HTMLInputElement, query: string, suggestions: Suggestion<SuggestionData<T>>[] | undefined) => void;
   onSearchError?: (this: HTMLInputElement, query: string | null, error: unknown) => void;
   onSuggestionsFetch?:
-    | ((this: HTMLInputElement, suggestions: Suggestion<SuggestionData<T>>[]) => Suggestion<SuggestionData<T>>[] | void)
-    | null;
+    ((this: HTMLInputElement, suggestions: Suggestion<SuggestionData<T>>[]) => Suggestion<SuggestionData<T>>[] | void) | null;
   onSelect?: ((this: HTMLInputElement, suggestion: Suggestion<SuggestionData<T>>, changed: boolean) => void) | null;
   onSelectNothing?: ((this: HTMLInputElement, query: string) => void) | null;
   onInvalidateSelection?: ((this: HTMLInputElement, suggestion: Suggestion<SuggestionData<T>>) => void) | null;

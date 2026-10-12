@@ -17,7 +17,7 @@ describe("Bounds", function () {
       type: "ADDRESS",
       geoLocation: false,
       // disable mobile view features
-      mobileWidth: Number.NaN,
+      mobileWidth: NaN,
     });
 
     helpers.returnGoodStatus(server);

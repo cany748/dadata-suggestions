@@ -53,7 +53,7 @@ class FakeServer {
   queue: FakeRequest[] = [];
   routes: Route[] = [];
   defaultResponse: ResponseTuple = [404, {}, ""];
-  originalFetch = globalThis.fetch;
+  originalFetch = fetch;
 
   constructor() {
     globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {

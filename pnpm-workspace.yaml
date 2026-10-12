@@ -1,4 +1,6 @@
-allowBuilds:
-  unrs-resolver: true
 shamefullyHoist: true
 shellEmulator: true
+minimumReleaseAge: 0
+
+allowBuilds:
+  unrs-resolver: true

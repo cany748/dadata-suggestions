@@ -233,10 +233,12 @@ class ConstraintLocation {
     if (isPlainObject(data) && instance.type.dataComponents) {
       for (const [i, component] of instance.type.dataComponents.entries()) {
         const fieldName = component.id;
-        if (component.forLocations && data[fieldName]) {
-          this.fields[fieldName] = data[fieldName] as string;
-          this.specificity = i;
+        if (!component.forLocations || !data[fieldName]) {
+          continue;
         }
+
+        this.fields[fieldName] = data[fieldName] as string;
+        this.specificity = i;
       }
     }
 
@@ -307,16 +309,15 @@ class ConstraintLocation {
   }
 
   containsData(data: Record<string, any>) {
-    let result = true;
     if (this.fields.kladr_id) {
       return !!data.kladr_id && data.kladr_id.startsWith(this.significantKladr);
-    } else {
-      for (const [fieldName, value] of Object.entries(this.fields)) {
-        result = !!data[fieldName] && data[fieldName].toLowerCase() === String(value).toLowerCase();
-        if (!result) break;
-      }
-      return result;
     }
+    let result = true;
+    for (const [fieldName, value] of Object.entries(this.fields)) {
+      result = !!data[fieldName] && data[fieldName].toLowerCase() === String(value).toLowerCase();
+      if (!result) break;
+    }
+    return result;
   }
 }
 
@@ -521,31 +522,30 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   }
 
   setSuggestion(suggestion: Suggestion<any>) {
-    let data;
-    let value;
-
-    if (isPlainObject(suggestion) && isPlainObject(suggestion.data)) {
-      suggestion = structuredClone(suggestion);
-
-      if (this.bounds.own.length > 0) {
-        this.checkValueBounds(suggestion);
-        data = this.copyDataComponents(suggestion.data, this.bounds.all);
-        if (suggestion.data.kladr_id) {
-          data.kladr_id = this.getBoundedKladrId(suggestion.data.kladr_id, this.bounds.all);
-        }
-        suggestion.data = data;
-      }
-
-      this.selection = suggestion;
-
-      // `this.suggestions` required by `this.getSuggestionValue` and must be set before
-      this.suggestions = [suggestion];
-      value = this.getSuggestionValue(suggestion) || "";
-      this.currentValue = value;
-      this.element.value = value;
-      this.abortRequest();
-      trigger(this.element, "suggestions-set");
+    if (!isPlainObject(suggestion) || !isPlainObject(suggestion.data)) {
+      return;
     }
+
+    suggestion = structuredClone(suggestion);
+
+    if (this.bounds.own.length > 0) {
+      this.checkValueBounds(suggestion);
+      const data = this.copyDataComponents(suggestion.data, this.bounds.all);
+      if (suggestion.data.kladr_id) {
+        data.kladr_id = this.getBoundedKladrId(suggestion.data.kladr_id, this.bounds.all);
+      }
+      suggestion.data = data;
+    }
+
+    this.selection = suggestion;
+
+    // `this.suggestions` required by `this.getSuggestionValue` and must be set before
+    this.suggestions = [suggestion];
+    const value = this.getSuggestionValue(suggestion) || "";
+    this.currentValue = value;
+    this.element.value = value;
+    this.abortRequest();
+    trigger(this.element, "suggestions-set");
   }
 
   /**
@@ -741,7 +741,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
         this.currentRequest = null;
       }
     };
-    request.then(onComplete, onComplete);
+    request.then(onComplete).catch(onComplete);
 
     return request;
   }
@@ -769,8 +769,6 @@ class Suggestions<T extends string = keyof SuggestionMap> {
    * Checks response format and data
    */
   processResponse(response: unknown): response is SuggestionsResponse {
-    let suggestions;
-
     if (!isPlainObject(response) || !Array.isArray(response.suggestions)) {
       return false;
     }
@@ -779,7 +777,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     this.setUnrestrictedValues(response.suggestions);
 
     if (typeof this.options.onSuggestionsFetch === "function") {
-      suggestions = this.options.onSuggestionsFetch.call(this.element, response.suggestions);
+      const suggestions = this.options.onSuggestionsFetch.call(this.element, response.suggestions);
       if (Array.isArray(suggestions)) {
         response.suggestions = suggestions;
       }
@@ -925,7 +923,6 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       for (const [i, suggestion] of response.suggestions.entries()) {
         if (suggestion.value === query) {
           response.suggestions[i] = enrichedSuggestion;
-          continue;
         }
       }
     }
@@ -957,20 +954,15 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       }
     };
 
-    request.then(
-      ({ data: status, response }: { data: Status | null; response: Response }) => {
-        if (status?.search) {
-          const plan = response.headers.get("X-Plan");
-          status.plan = plan;
-          Object.assign(this.status, status);
-        } else {
-          triggerError(new Error("Service Unavailable"));
+    request
+      .then(({ data: status, response }: { data: Status | null; response: Response }) => {
+        if (!status?.search) {
+          throw new Error("Service Unavailable");
         }
-      },
-      (error) => {
-        triggerError(error);
-      },
-    );
+        status.plan = response.headers.get("X-Plan");
+        Object.assign(this.status, status);
+      })
+      .catch(triggerError);
   }
 
   checkLocation() {
@@ -988,18 +980,19 @@ class Suggestions<T extends string = keyof SuggestionMap> {
         locationRequest = this.request("iplocate/address");
       }
 
-      locationRequest.then(
-        ({ data: resp }) => {
+      locationRequest
+        .then(({ data: resp }) => {
           const locationData = resp && resp.location && resp.location.data;
-          if (locationData && locationData.kladr_id) {
-            detectedLocation = {
-              kladr_id: locationData.kladr_id,
-            };
-            this.geoLocation = detectedLocation;
+          if (!locationData?.kladr_id) {
+            return;
           }
-        },
-        () => {},
-      );
+
+          detectedLocation = {
+            kladr_id: locationData.kladr_id,
+          };
+          this.geoLocation = detectedLocation;
+        })
+        .catch(() => {});
     }
   }
 
@@ -1077,20 +1070,17 @@ class Suggestions<T extends string = keyof SuggestionMap> {
    * Ничего не возвращает, меняет в самом suggestion
    */
   checkValueBounds(suggestion: Suggestion<any>) {
-    let valueData;
-
-    // If any bounds set up
-    if (this.bounds.own.length > 0 && this.type.composeValue) {
-      // делаем копию
-      const bounds = [...this.bounds.own];
-      // если роль текущего инстанса плагина показывать только район города
-      // то для корректного формировния нужен city_district_fias_id
-      if (bounds.length === 1 && bounds[0] === "city_district") {
-        bounds.push("city_district_fias_id");
-      }
-      valueData = this.copyDataComponents(suggestion.data, bounds);
-      suggestion.value = this.type.composeValue(valueData);
+    if (this.bounds.own.length === 0 || !this.type.composeValue) {
+      return;
     }
+
+    const bounds = [...this.bounds.own];
+    // если роль текущего инстанса плагина показывать только район города
+    // то для корректного формировния нужен city_district_fias_id
+    if (bounds.length === 1 && bounds[0] === "city_district") {
+      bounds.push("city_district_fias_id");
+    }
+    suggestion.value = this.type.composeValue(this.copyDataComponents(suggestion.data, bounds));
   }
 
   copyDataComponents<D extends Record<string, unknown>>(data: D, components: string[]) {
@@ -1207,11 +1197,13 @@ class Suggestions<T extends string = keyof SuggestionMap> {
             dontEnrich: true,
           }).then((index) => {
             // If all data fetched but nothing selected
-            if (index === -1) {
-              this.currentValue += " ";
-              this.element.value = this.currentValue;
-              this.proceedChangedValue();
+            if (index !== -1) {
+              return;
             }
+
+            this.currentValue += " ";
+            this.element.value = this.currentValue;
+            this.proceedChangedValue();
           });
         }
         return;
@@ -1268,10 +1260,8 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   }
 
   onValueChange() {
-    let currentSelection;
-
     if (this.selection) {
-      currentSelection = this.selection;
+      const currentSelection = this.selection;
       this.selection = null;
       this.trigger("InvalidateSelection", currentSelection);
     }
@@ -1282,11 +1272,13 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   }
 
   completeOnFocus() {
-    if (document.activeElement === this.element) {
-      this.update();
-      if (globalThis.innerWidth <= this.options.mobileWidth) {
-        this.setCursorAtEnd();
-      }
+    if (document.activeElement !== this.element) {
+      return;
+    }
+
+    this.update();
+    if (innerWidth <= this.options.mobileWidth) {
+      this.setCursorAtEnd();
     }
   }
 
@@ -1376,12 +1368,11 @@ class Suggestions<T extends string = keyof SuggestionMap> {
    * @param index index of suggestion to select. Can be -1
    */
   async select(index: number, selectionOptions?: SelectionOptions) {
-    const suggestion = this.suggestions[index];
-    const continueSelecting = selectionOptions && selectionOptions.continueSelecting;
-    const currentValue = this.currentValue;
-
     // Prevent recursive execution
     if (this.triggering.Select) return;
+
+    const suggestion = this.suggestions[index];
+    const continueSelecting = selectionOptions && selectionOptions.continueSelecting;
 
     // if no suggestion to select
     if (!suggestion) {
@@ -1392,6 +1383,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       return;
     }
 
+    const currentValue = this.currentValue;
     const hasSameValues = this.hasSameValues(suggestion);
 
     const [enrichedSuggestion, hasBeenEnriched] = await this.enrichSuggestion(suggestion, selectionOptions);
@@ -1402,12 +1394,12 @@ class Suggestions<T extends string = keyof SuggestionMap> {
    * Formats and selects final (enriched) suggestion
    */
   selectSuggestion(suggestion: Suggestion<any>, index: number, lastValue: string, selectionOptions: SelectionOptions) {
+    // Prevent recursive execution
+    if (this.triggering.Select) return;
+
     let continueSelecting = selectionOptions.continueSelecting;
     const assumeDataComplete = !this.type.isDataComplete || this.type.isDataComplete.call(this, suggestion);
     const currentSelection = this.selection;
-
-    // Prevent recursive execution
-    if (this.triggering.Select) return;
 
     if (assumeDataComplete) {
       continueSelecting = false;
@@ -1505,21 +1497,23 @@ class Suggestions<T extends string = keyof SuggestionMap> {
    * Listen for click event on suggestions list:
    */
   onSuggestionClick(e: MouseEvent) {
+    if (this.dropdownDisabled) {
+      return;
+    }
+
     let el = e.target as HTMLElement | null;
     let index: string | undefined;
 
-    if (!this.dropdownDisabled) {
-      this.cancelFocus = true;
-      this.element.focus();
+    this.cancelFocus = true;
+    this.element.focus();
 
-      // eslint-disable-next-line no-cond-assign
-      while (el && !(index = el.dataset.index)) {
-        el = el.closest(`.${this.classes.suggestion}`);
-      }
+    // eslint-disable-next-line no-cond-assign
+    while (el && !(index = el.dataset.index)) {
+      el = el.closest(`.${this.classes.suggestion}`);
+    }
 
-      if (index && !Number.isNaN(+index)) {
-        this.select(+index, {});
-      }
+    if (index && !Number.isNaN(+index)) {
+      this.select(+index, {});
     }
   }
 
@@ -1532,13 +1526,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
 
   toggleDropdownEnabling(enable: boolean) {
     this.dropdownDisabled = !enable;
-    if (this.container) {
-      if (enable) {
-        this.container.removeAttribute("disabled");
-      } else {
-        this.container.setAttribute("disabled", "true");
-      }
-    }
+    this.container?.toggleAttribute("disabled", !enable);
   }
 
   disableDropdown() {
@@ -1560,12 +1548,12 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   }
 
   suggest() {
-    const options = this.options;
-    const html = [];
-
     if (!this.requestMode.userSelect) {
       return;
     }
+
+    const options = this.options;
+    const html = [];
 
     // если нечего показывать, то сообщаем об этом
     if (this.hasSuggestionsToChoose()) {
@@ -1651,10 +1639,12 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   hide() {
     this.visible = false;
     this.selectedIndex = -1;
-    if (this.container) {
-      this.container.style.display = "none";
-      this.container.innerHTML = "";
+    if (!this.container) {
+      return;
     }
+
+    this.container.style.display = "none";
+    this.container.replaceChildren();
   }
 
   activate(index: number) {
@@ -1682,14 +1672,16 @@ class Suggestions<T extends string = keyof SuggestionMap> {
   }
 
   deactivate(restoreValue: boolean) {
-    if (!this.dropdownDisabled) {
-      this.selectedIndex = -1;
-      for (const item of this.getSuggestionsItems()) {
-        item.classList.remove(this.classes.selected);
-      }
-      if (restoreValue) {
-        this.element.value = this.currentValue;
-      }
+    if (this.dropdownDisabled) {
+      return;
+    }
+
+    this.selectedIndex = -1;
+    for (const item of this.getSuggestionsItems()) {
+      item.classList.remove(this.classes.selected);
+    }
+    if (restoreValue) {
+      this.element.value = this.currentValue;
     }
   }
 
