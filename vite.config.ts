@@ -17,6 +17,7 @@ export default defineConfig({
       instances: [{ browser: "chromium" }],
       screenshotFailures: false,
     },
+    coverage: { include: ["src/**/*"] },
     include: ["test/specs/*.js"],
     setupFiles: ["test/setup.js"],
     globals: true,
