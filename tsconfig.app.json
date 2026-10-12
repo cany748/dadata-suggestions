@@ -1,30 +1,16 @@
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "ESNext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "target": "ES2022",
     "moduleDetection": "force",
-    "useDefineForClassFields": true,
-    "libReplacement": false,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["./src/*"]
     },
-    "resolveJsonModule": true,
-    "types": [],
-    "allowImportingTsExtensions": true,
-    "strict": true,
-    "noImplicitThis": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "skipLibCheck": true
   },
-  "include": ["env.d.ts", "src/**/*", "playground/**/*"],
-  "exclude": ["src/**/__tests__/*"]
+  "include": ["env.d.ts", "src/**/*", "playground/**/*"]
 }
