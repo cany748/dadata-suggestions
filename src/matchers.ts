@@ -144,12 +144,8 @@ const matchers = {
 
       if (suggestions.length === 1) {
         if (fields) {
-          for (let getField of fields) {
-            let stopwords;
-            if (Array.isArray(getField)) {
-              stopwords = getField[1];
-              getField = getField[0];
-            }
+          for (const field of fields) {
+            const [getField, stopwords] = Array.isArray(field) ? field : [field];
             const fieldValue = getField(suggestions[0]!);
             const fieldWords = fieldValue && splitTokens(split(fieldValue, stopwords));
 

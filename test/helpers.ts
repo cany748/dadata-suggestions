@@ -33,7 +33,8 @@ class FakeRequest {
       status,
       statusText: "",
       headers: new Headers(headers),
-      text: () => Promise.resolve(body),
+      // eslint-disable-next-line @typescript-eslint/require-await -- promise-function-async requires async here
+      text: async () => body,
     } as Response);
   }
 
@@ -56,8 +57,8 @@ class FakeServer {
   originalFetch = fetch;
 
   constructor() {
-    globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = new FakeRequest(String(input), init);
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new FakeRequest(input instanceof Request ? input.url : String(input), init);
       this.requests.push(request);
       this.queue.push(request);
 
@@ -69,7 +70,7 @@ class FakeServer {
         const abort = () => {
           request.aborted = true;
           request.settled = true;
-          reject(signal!.reason);
+          reject(signal!.reason as Error);
         };
         if (signal?.aborted) {
           abort();
@@ -150,7 +151,7 @@ const helpers = {
     });
     el.dispatchEvent(event);
   },
-  responseFor(suggestions: any) {
+  responseFor(suggestions: unknown) {
     return [
       200,
       { "Content-type": "application/json" },
@@ -169,21 +170,21 @@ const helpers = {
     });
     el.dispatchEvent(event);
   },
-  appendUnrestrictedValue(suggestion: any) {
+  appendUnrestrictedValue<S extends { value: string }>(suggestion: S) {
     return { ...suggestion, unrestricted_value: suggestion.value };
   },
-  wrapFormattedValue(value: any, status: any) {
+  wrapFormattedValue(value: string, status?: string) {
     return `<span class="suggestions-value"${status ? ` data-suggestion-status="${status}"` : ""}>${value}</span>`;
   },
-  returnStatus(server: any, status: any) {
+  returnStatus(server: FakeServer, status: unknown) {
     const urlPattern = String.raw`\/status\/(\w)`;
 
     server.respond("GET", new RegExp(urlPattern), JSON.stringify(status));
   },
-  returnGoodStatus(server: any) {
+  returnGoodStatus(server: FakeServer) {
     helpers.returnStatus(server, { search: true, enrich: true });
   },
-  returnPoorStatus(server: any) {
+  returnPoorStatus(server: FakeServer) {
     helpers.returnStatus(server, { search: true, enrich: false });
   },
 };

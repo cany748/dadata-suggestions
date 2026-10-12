@@ -1,7 +1,7 @@
 import { CLASSES, WORD_DELIMITERS, WORD_PARTS_DELIMITERS } from "./constants";
-import type { FormatResultOptions } from "./types";
+import type { FormatResultOptions, Suggestion } from "./types";
 
-export const trigger = (element: EventTarget, eventName: string, detail?: any[]): void => {
+export const trigger = (element: EventTarget, eventName: string, detail?: unknown[]): void => {
   const event = new CustomEvent(eventName, {
     bubbles: true,
     cancelable: true,
@@ -12,7 +12,7 @@ export const trigger = (element: EventTarget, eventName: string, detail?: any[])
 
 export const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== "object" || value === null) return false;
-  const proto = Object.getPrototypeOf(value);
+  const proto: unknown = Object.getPrototypeOf(value);
   return proto === null || proto === Object.prototype;
 };
 
@@ -52,19 +52,21 @@ export const arrayMinus = (array1: string[], array2?: string[]) => {
   });
 };
 
-export const serialize = (data: any) => {
-  return JSON.stringify(data, (_, value) => (value === null ? undefined : value));
+export const serialize = (data: unknown) => {
+  return JSON.stringify(data, (_, value: unknown) => (value === null ? undefined : value));
 };
 
-export const buildCacheKey = (params = {} as Record<string, any>) => {
+export const buildCacheKey = (params: Record<string, unknown> = {}) => {
   const keys = Object.keys(params).sort();
   return keys.map((key) => `${key}=${JSON.stringify(params[key])}`).join("&");
 };
 
-export const objectsEqual = (a: Record<string, any>, b: Record<string, any>) => {
+export const objectsEqual = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
 
   if (a && b && typeof a == "object" && typeof b == "object") {
+    const objA = a as Record<string, unknown>;
+    const objB = b as Record<string, unknown>;
     const keys = Object.keys(a);
     const length = keys.length;
 
@@ -79,7 +81,7 @@ export const objectsEqual = (a: Record<string, any>, b: Record<string, any>) => 
       const key = keys[i];
       if (!key) continue;
 
-      if (!objectsEqual(a[key], b[key])) return false;
+      if (!objectsEqual(objA[key], objB[key])) return false;
     }
 
     return true;
@@ -92,7 +94,7 @@ export const objectsEqual = (a: Record<string, any>, b: Record<string, any>) => 
 /**
  * Проверяет, что указанные поля в объекте заполнены.
  */
-export const fieldsAreNotEmpty = (obj: Record<string, any>, fields: string[]) => {
+export const fieldsAreNotEmpty = (obj: unknown, fields: string[]) => {
   if (!isPlainObject(obj)) {
     return false;
   }
@@ -207,14 +209,15 @@ const escapeHtml = (str: string) => str.replaceAll(/[&<>"'/]/g, (ch) => escapeHt
 export const highlightMatches = (value: string | null | undefined, currentValue: string, options?: FormatResultOptions) => {
   if (!value) return "";
 
-  type Chunk = any;
+  type Chunk = { text: string; matched?: boolean } & (
+    { matchable: true; formatted: string; hasUpperCase?: boolean } | { matchable?: false; formatted?: string }
+  );
   const chunks: Chunk[] = [];
   const unformattableTokens = options && options.unformattableTokens;
   let maxLength = options && options.maxLength;
   const rWords = new RegExp(`([^${WORD_DELIMITERS}]*)([${WORD_DELIMITERS}]*)`, "g");
   let match;
   let i: number;
-  let chunk: Chunk;
 
   const tokens = tokenize(currentValue, unformattableTokens);
 
@@ -230,13 +233,13 @@ export const highlightMatches = (value: string | null | undefined, currentValue:
   // parse string by words
   // eslint-disable-next-line no-cond-assign
   while ((match = rWords.exec(value)) && match[0]) {
-    const word = match[1];
+    const word = match[1] ?? "";
     chunks.push({
       text: word,
 
       // upper case means a word is a name and can be highlighted even if presents in unformattableTokens
-      hasUpperCase: word ? word.toLowerCase() !== word : false,
-      formatted: formatToken(word || ""),
+      hasUpperCase: word.toLowerCase() !== word,
+      formatted: formatToken(word),
       matchable: true,
     });
     if (match[2]) {
@@ -248,10 +251,10 @@ export const highlightMatches = (value: string | null | undefined, currentValue:
 
   // use simple loop because length can change
   for (i = 0; i < chunks.length; i++) {
-    chunk = chunks[i];
+    const chunk = chunks[i]!;
     if (chunk.matchable && !chunk.matched && (!unformattableTokens?.includes(chunk.formatted) || chunk.hasUpperCase)) {
-      for (const [, matcher] of tokenMatchers.entries()) {
-        const $tokenMatch = matcher.exec(chunk.formatted)!;
+      for (const matcher of tokenMatchers) {
+        const $tokenMatch = matcher.exec(chunk.formatted);
         let length;
         let nextIndex = i + 1;
 
@@ -315,7 +318,7 @@ export const highlightMatches = (value: string | null | undefined, currentValue:
 
   if (maxLength) {
     for (i = 0; i < chunks.length && maxLength >= 0; i++) {
-      chunk = chunks[i];
+      const chunk = chunks[i]!;
       maxLength -= chunk.text.length;
       if (maxLength < 0) {
         chunk.text = `${chunk.text.slice(0, Math.max(0, chunk.text.length + maxLength))}...`;
@@ -337,7 +340,11 @@ export const highlightMatches = (value: string | null | undefined, currentValue:
   return nowrapLinkedParts(formattedStr);
 };
 
-export const makeSuggestionLabel = (suggestions: any[], suggestion: any, fieldNames?: Record<string, string>) => {
+export const makeSuggestionLabel = (
+  suggestions: Suggestion<Record<string, unknown>>[],
+  suggestion: Suggestion<Record<string, unknown>>,
+  fieldNames?: Record<string, string>,
+) => {
   const hasSameValues = suggestions.some((s) => s.value === suggestion.value && s !== suggestion);
   if (!fieldNames || !suggestion.data || !hasSameValues) {
     return;
@@ -347,7 +354,7 @@ export const makeSuggestionLabel = (suggestions: any[], suggestion: any, fieldNa
 
   for (const field of Object.keys(fieldNames)) {
     const value = suggestion.data[field];
-    if (value) {
+    if (typeof value === "string" && value) {
       nameData[field] = formatToken(value);
     }
   }

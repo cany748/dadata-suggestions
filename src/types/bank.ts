@@ -26,7 +26,7 @@ const BANK_TYPE = {
     value = this.wrapFormattedValue(value, suggestion);
 
     if (address) {
-      address = address.replace(/^\d{6}( РОССИЯ)?, /i, "");
+      address = address.replace(/^\d{6}(?: РОССИЯ)?, /i, "");
       address =
         innerWidth <= this.options.mobileWidth
           ? address.replace(new RegExp(`^([^${WORD_DELIMITERS}]+[${WORD_DELIMITERS}]+[^${WORD_DELIMITERS}]+).*`), "$1")

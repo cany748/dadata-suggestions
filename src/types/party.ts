@@ -24,8 +24,7 @@ const formattedField = (main: string, alt: string | null, currentValue: string, 
 
 const formatResultInn = (ctx: Suggestions<any>, suggestion: Suggestion<SuggestionParty>, currentValue: string) => {
   const inn = suggestion.data && suggestion.data.inn;
-  const innPartsLength =
-    suggestion.data && suggestion.data.type ? innPartsLengths[suggestion.data.type as keyof typeof innPartsLengths] : undefined;
+  const innPartsLength = suggestion.data && suggestion.data.type ? innPartsLengths[suggestion.data.type] : undefined;
   const rDigit = /\d/;
 
   if (inn) {
@@ -92,7 +91,7 @@ export const PARTY_TYPE = {
     value = this.wrapFormattedValue(value, suggestion);
 
     if (address) {
-      address = address.replace(/^(\d{6}|Россия),\s+/i, "");
+      address = address.replace(/^(?:\d{6}|Россия),\s+/i, "");
       address = isMobile
         ? address.replace(new RegExp(`^([^${WORD_DELIMITERS}]+[${WORD_DELIMITERS}]+[^${WORD_DELIMITERS}]+).*`), "$1")
         : highlightMatches(address, currentValue, {
