@@ -372,7 +372,5 @@ export const makeSuggestionLabel = (suggestions: any[], suggestion: any, fieldNa
     }
   }
 
-  if (labels.length > 0) {
-    return escapeHtml(labels.join(", "));
-  }
+  return labels.length > 0 ? escapeHtml(labels.join(", ")) : undefined;
 };

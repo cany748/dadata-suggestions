@@ -8,7 +8,7 @@ import { EMAIL_TYPE } from "./types/email";
 import { BANK_TYPE } from "./types/bank";
 import { FMS_TYPE } from "./types/fms";
 import { Outward } from "./types/outward";
-import type { ConstraintOptions, GeoLocation, Options, Suggestion, SuggestionMap, SuggestionsType } from "./types";
+import type { ConstraintOptions, FormatResultOptions, GeoLocation, Options, Suggestion, SuggestionMap, SuggestionsType } from "./types";
 
 const types = {
   NAME: NAME_TYPE,
@@ -76,7 +76,7 @@ type RequestOptions = {
   /** Не вызывать колбэки `onSearchStart`, `onSearchComplete`, `onSearchError` */
   noCallbacks?: boolean;
   useEnrichmentCache?: boolean;
-  method?: ServiceMethod;
+  method?: ServiceMethod | undefined;
 };
 
 type SuggestionsResponse = { suggestions: Suggestion<any>[] };
@@ -627,7 +627,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       {
         method: httpMethod,
         headers,
-        body: params && serialize(params),
+        body: params ? serialize(params) : null,
         // server sets Access-Control-Allow-Origin: *
         // which requires no credentials
         credentials: "omit",
@@ -873,7 +873,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return this.options.noSuggestionsHint || this.type.noSuggestionsHint;
   }
 
-  async enrichSuggestion(suggestion: Suggestion<any>, selectionOptions?: SelectionOptions): Promise<[Suggestion<any>, boolean?]> {
+  async enrichSuggestion(suggestion: Suggestion<any>, selectionOptions?: SelectionOptions): Promise<[Suggestion<any>, boolean]> {
     if (
       !this.options.enrichmentEnabled ||
       !this.type.enrichmentEnabled ||
@@ -881,12 +881,12 @@ class Suggestions<T extends string = keyof SuggestionMap> {
       !this.type.getEnrichmentQuery ||
       (selectionOptions && selectionOptions.dontEnrich)
     ) {
-      return [suggestion];
+      return [suggestion, false];
     }
 
     // if current suggestion is already enriched, use it
     if (suggestion.data && suggestion.data.qc != null) {
-      return [suggestion];
+      return [suggestion, false];
     }
 
     this.disableDropdown();
@@ -910,7 +910,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     }
 
     const enrichedSuggestion = suggestions?.[0];
-    return enrichedSuggestion ? [enrichedSuggestion, true] : [suggestion];
+    return enrichedSuggestion ? [enrichedSuggestion, true] : [suggestion, false];
   }
 
   /**
@@ -1630,7 +1630,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     return `<span class="${this.classes.value}"${status ? ` data-suggestion-status="${status}"` : ""}>${value}</span>`;
   }
 
-  formatResult(value: string, currentValue: string, suggestion: Suggestion<any>, options: { unformattableTokens?: string[] }) {
+  formatResult(value: string, currentValue: string, suggestion: Suggestion<any>, options: FormatResultOptions) {
     value = highlightMatches(value, currentValue, options);
 
     return this.wrapFormattedValue(value, suggestion);
@@ -1788,7 +1788,7 @@ class Suggestions<T extends string = keyof SuggestionMap> {
     let constraints = this.constraints;
     let parentInstance: Suggestions<any> | undefined;
     let parentData;
-    const params: { locations?: GeoLocation[]; restrict_value?: boolean } = {};
+    const params: { locations?: GeoLocation[]; restrict_value?: boolean | undefined } = {};
 
     // Walk up the parent chain to get constraint data
     while (constraints instanceof HTMLElement) {

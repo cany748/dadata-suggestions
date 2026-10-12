@@ -1,7 +1,7 @@
 type ResponseTuple = [status: number, headers: Record<string, string>, body: string];
 type Responder = (request: FakeRequest) => void;
 type ResponseHandler = string | ResponseTuple | Responder;
-type Route = { method?: string; url?: string | RegExp; handler: ResponseTuple | Responder };
+type Route = { method?: string | undefined; url?: string | RegExp | undefined; handler: ResponseTuple | Responder };
 type RespondArgs = [ResponseHandler] | [string | RegExp, ResponseHandler] | [string, string | RegExp, ResponseHandler];
 
 const toTuple = (body: string | ResponseTuple): ResponseTuple => (Array.isArray(body) ? body : [200, {}, body]);

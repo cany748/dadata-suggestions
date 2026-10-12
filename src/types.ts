@@ -717,7 +717,7 @@ export type ComposeValueOptions = {
   excludeCityDistrict?: boolean;
 };
 
-export type FormatResultOptions = { unformattableTokens?: string[]; maxLength?: number };
+export type FormatResultOptions = { unformattableTokens?: string[] | undefined; maxLength?: number };
 
 /**
  * Поведение подсказок конкретного типа (`NAME`, `ADDRESS` и т.д.).
@@ -757,7 +757,7 @@ export type SuggestionsType<T> = {
   /** Значение для поля ввода; `null` — использовать значение по умолчанию */
   getSuggestionValue?: (
     instance: Suggestions<any>,
-    options: { suggestion: Suggestion<T>; hasSameValues?: boolean; hasBeenEnriched?: boolean },
+    options: { suggestion: Suggestion<T>; hasSameValues?: boolean | undefined; hasBeenEnriched?: boolean | undefined },
   ) => string | null;
 };
 
@@ -829,7 +829,7 @@ export type Options<T extends string = keyof SuggestionMap> = {
         value: string,
         currentValue: string,
         suggestion: Suggestion<SuggestionData<T>>,
-        options: { unformattableTokens?: string[] },
+        options: FormatResultOptions,
       ) => string)
     | null;
   formatSelected?: ((this: Suggestions<T>, suggestion: Suggestion<SuggestionData<T>>) => string | null) | null;
