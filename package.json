@@ -2,7 +2,7 @@
   "name": "@cany748/dadata-suggestions",
   "type": "module",
   "version": "0.3.1",
-  "packageManager": "pnpm@11.10.0",
+  "packageManager": "pnpm@12.11.2",
   "description": "DaData.ru suggestions dropdown plugin",
   "author": "Alexander <cany748@gmail.com>",
   "license": "MIT",
@@ -38,15 +38,15 @@
     "format": "prettier --write src/"
   },
   "devDependencies": {
-    "@cany748/eslint-config": "^6.0.0",
-    "@types/node": "^26.1.0",
-    "@typescript-eslint/eslint-plugin": "^8.63.0",
-    "@vitest/browser": "^4.1.10",
-    "@vitest/browser-playwright": "^4.1.10",
-    "@vitest/coverage-v8": "^4.1.10",
-    "typescript": "^6.0.3",
-    "unplugin-dts": "^1.0.3",
-    "vite": "^8.1.3",
-    "vitest": "^4.1.10"
+    "@cany748/eslint-config": "^7.0.0",
+    "@types/node": "^26.6.5",
+    "@typescript-eslint/eslint-plugin": "^8.71.1",
+    "@vitest/browser": "^5.0.3",
+    "@vitest/browser-playwright": "^5.0.3",
+    "@vitest/coverage-v8": "^5.0.3",
+    "typescript": "^7.0.2",
+    "unplugin-dts": "^1.1.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
   }
 }
